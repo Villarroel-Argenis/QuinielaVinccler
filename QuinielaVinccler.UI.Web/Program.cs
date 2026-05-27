@@ -27,6 +27,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+// ── Registrar servicios ────
+builder.Services.AddScoped<LoteService>();
+builder.Services.AddScoped<PdfService>();
 
 // ── HttpContext (necesario para CustomAuthStateProvider en Blazor Server) ────
 builder.Services.AddHttpContextAccessor();
@@ -41,6 +44,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
 
 // ────────────────────────────────────────────────────────────────────────────
+QuestPDF.Settings.License = LicenseType.Community;
+
 var app = builder.Build();
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -68,6 +73,7 @@ app.UseAntiforgery();
 
 // ── Endpoints ────────────────────────────────────────────────────────────────
 app.MapAuthEndpoints();
+app.MapLoteEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

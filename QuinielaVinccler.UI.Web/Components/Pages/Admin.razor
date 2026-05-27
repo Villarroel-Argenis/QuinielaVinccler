@@ -2,6 +2,16 @@
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "Admin")]
 
+<PageTitle>Panel Administrador</PageTitle>
 
-<h3>Admin</h3>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Panel de Administrador</MudText>
 
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+
+        <!-- TAB 1: Generar Lotes -->
+        <MudTabPanel Text="Generar Planillas" Icon="@Icons.Material.Filled.Add">
+            <LoteComponent/>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>

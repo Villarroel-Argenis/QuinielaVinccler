@@ -3,6 +3,8 @@
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<Lote> Lotes => Set<Lote>();
+    public DbSet<Planilla> Planillas => Set<Planilla>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

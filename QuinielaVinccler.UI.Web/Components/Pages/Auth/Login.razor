@@ -1,0 +1,87 @@
+﻿@page "/login"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>Iniciar Sesión – Quiniela FIFA 2026</PageTitle>
+
+<div class="auth-bg d-flex align-center justify-center" style="min-height:100vh;">
+    <MudPaper Elevation="4" Class="pa-8 rounded-lg" Style="width:100%; max-width:420px;">
+
+        <div class="d-flex flex-column align-center mb-6">
+            <img src="/images/logo-vinccler.svg" alt="Vinccler" style="height:56px;" class="mb-3" />
+            <div class="d-flex align-center gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Style="font-weight:700;">Quiniela FIFA 2026</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">USA · México · Canadá</MudText>
+        </div>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true"
+                      ShowCloseIcon="true" CloseIconClicked="() => _error = null">
+                @_error
+            </MudAlert>
+        }
+
+        @if (_tokenExpired)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true">
+                La sesión expiró. Vuelve a iniciar sesión.
+            </MudAlert>
+        }
+
+        <MudTextField @bind-Value="_email"
+                      Label="Correo electrónico"
+                      InputType="InputType.Email"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Email"
+                      Disabled="_loading"
+                      Class="mb-3"
+                      Immediate="true"
+                      OnKeyDown="HandleKeyDown" />
+
+        <MudTextField @bind-Value="_password"
+                      Label="Contraseña"
+                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_showPassword
+                                                ? Icons.Material.Filled.VisibilityOff
+                                            : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _showPassword = !_showPassword"
+                      Disabled="_loading"
+                      Class="mb-5"
+                      Immediate="true"
+                      OnKeyDown="HandleKeyDown" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Size="Size.Large"
+                   OnClick="HandleLogin"
+                   Disabled="_loading"
+                   Style="font-weight:600; letter-spacing:.5px;">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Verificando...</span>
+            }
+            else
+            {
+                <span>Ingresar</span>
+            }
+        </MudButton>
+
+        <MudDivider Class="my-4" />
+
+        <div class="d-flex align-center justify-center gap-1">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">¿No tienes cuenta?</MudText>
+            <MudLink Href="/register" Typo="Typo.body2" Color="Color.Primary">
+                Regístrate aquí
+            </MudLink>
+        </div>
+
+    </MudPaper>
+</div>

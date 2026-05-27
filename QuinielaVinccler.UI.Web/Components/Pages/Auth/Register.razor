@@ -1,0 +1,117 @@
+﻿@page "/register"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>Registro – Quiniela FIFA 2026</PageTitle>
+
+<div class="auth-bg d-flex align-center justify-center" style="min-height:100vh; padding:24px 0;">
+    <MudPaper Elevation="4" Class="pa-8 rounded-lg" Style="width:100%; max-width:480px;">
+
+        <div class="d-flex flex-column align-center mb-6">
+            <img src="/images/logo-vinccler.svg" alt="Vinccler" style="height:56px;" class="mb-3" />
+            <div class="d-flex align-center gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Style="font-weight:700;">Quiniela FIFA 2026</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Crea tu cuenta para participar</MudText>
+        </div>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true"
+                      ShowCloseIcon="true" CloseIconClicked="() => _error = null">
+                @_error
+            </MudAlert>
+        }
+
+        <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-1">Datos personales</MudText>
+
+        <MudTextField @bind-Value="_fullName"
+                      Label="Nombre completo"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Person"
+                      Disabled="_loading"
+                      Class="mb-3" />
+
+        <MudGrid Spacing="2" Class="mb-3">
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_ci"
+                              Label="Cédula de identidad"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Badge"
+                              Disabled="_loading" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="_telefono"
+                              Label="Teléfono"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Phone"
+                              Disabled="_loading" />
+            </MudItem>
+        </MudGrid>
+
+        <MudText Typo="Typo.overline" Color="Color.Secondary" Class="mb-1 mt-2">Acceso</MudText>
+
+        <MudTextField @bind-Value="_email"
+                      Label="Correo electrónico"
+                      InputType="InputType.Email"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Email"
+                      Disabled="_loading"
+                      Class="mb-3" />
+
+        <MudTextField @bind-Value="_password"
+                      Label="Contraseña"
+                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_showPassword
+                                                ? Icons.Material.Filled.VisibilityOff
+                                            : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _showPassword = !_showPassword"
+                      HelperText="Mínimo 4 caracteres"
+                      Disabled="_loading"
+                      Class="mb-3" />
+
+        <MudTextField @bind-Value="_confirmPassword"
+                      Label="Confirmar contraseña"
+                      InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Lock"
+                      Disabled="_loading"
+                      Class="mb-5" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Size="Size.Large"
+                   OnClick="HandleRegister"
+                   Disabled="_loading"
+                   Style="font-weight:600; letter-spacing:.5px;">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Registrando...</span>
+            }
+            else
+            {
+                <span>Crear cuenta</span>
+            }
+        </MudButton>
+
+        <MudDivider Class="my-4" />
+
+        <div class="d-flex align-center justify-center gap-1">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">¿Ya tienes cuenta?</MudText>
+            <MudLink Href="/login" Typo="Typo.body2" Color="Color.Primary">
+                Inicia sesión
+            </MudLink>
+        </div>
+
+    </MudPaper>
+</div>

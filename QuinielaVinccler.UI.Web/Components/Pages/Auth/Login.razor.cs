@@ -27,14 +27,13 @@ public partial class Login : ComponentBase
             return;
         }
 
-        var uri = new Uri(Nav.Uri);
-        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        _tokenExpired = qs["error"] == "expired";
+        var qs = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
+        _tokenExpired = qs.TryGetValue("error", out var val) && val == "expired";
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await HandleLogin();
+        if (e.Key == "Enter" && !_loading) await HandleLogin();
     }
 
     private async Task HandleLogin()

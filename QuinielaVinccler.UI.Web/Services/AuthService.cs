@@ -2,14 +2,21 @@
 
 public class AuthService(AppDbContext db)
 {
+    private const string DummyHash = "$2a$11$jEZEOC5QdetIWnW7WW1fk.SKhMoJdLI9kFXSnWqj25zKO.BzR3sJe";
+
     public async Task<AppUser?> LoginAsync(string email, string password)
     {
         var user = await db.Users
             .FirstOrDefaultAsync(u => u.Email == email.ToLower().Trim());
 
-        if (user is null) return null;
+        // Hash dummy para normalizar el tiempo de respuesta cuando el usuario no existe.
+        // Sin esto, la diferencia de tiempo entre "no existe" (~0ms) y
+        // "contraseña incorrecta" (~200ms de BCrypt) permite enumerar emails registrados.
+        var hash = user?.PasswordHash ?? DummyHash;
 
-        return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash) ? user : null;
+        var valid = BCrypt.Net.BCrypt.Verify(password, hash);
+
+        return (user is not null && valid) ? user : null;
     }
 
     public async Task<(bool Success, string? Error)> RegisterAsync(

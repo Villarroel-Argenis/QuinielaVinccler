@@ -43,6 +43,9 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoteService,LoteService > ();
 builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
+builder.Services.AddScoped<IPlanillaService, PlanillaService>();
+
 builder.Services.AddHostedService<PendingLoginCleanupService>(); // BackgroundService: tarea en segundo plano
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
 

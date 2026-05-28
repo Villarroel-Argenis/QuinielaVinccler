@@ -1,8 +1,161 @@
-﻿@page "/"
+@page "/"
 @page "/mis-planillas"
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "Registrado")]
 
-<h3>MisPlanillas</h3>
+<PageTitle>Mis Planillas – Quiniela FIFA 2026</PageTitle>
 
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
 
+    <div class="d-flex align-center gap-2 mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Primary" Size="Size.Large" />
+        <MudText Typo="Typo.h5" Style="font-weight:700;">Mis Planillas</MudText>
+    </div>
+
+    @* ── Vincular planilla ───────────────────────────────────────────────── *@
+    @if (!_quinielaCerrada)
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-6 rounded-lg">
+            <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">
+                Vincular planilla
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                Ingresa el código de tu planilla física para comenzar a predecir.
+            </MudText>
+
+            <MudGrid>
+                <MudItem xs="12" sm="7">
+                    <MudTextField @bind-Value="_codigoInput"
+                                  Label="Código de planilla"
+                                  Placeholder="P-12345678"
+                                  Variant="Variant.Outlined"
+                                  Disabled="_vinculando"
+                                  Immediate="true"
+                                  OnKeyDown="HandleKeyDownVincular"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.ConfirmationNumber" />
+                </MudItem>
+                <MudItem xs="12" sm="5" Class="d-flex align-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               OnClick="VincularPlanilla"
+                               Disabled="_vinculando || string.IsNullOrWhiteSpace(_codigoInput)"
+                               StartIcon="@Icons.Material.Filled.Link">
+                        @if (_vinculando)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Vinculando...</span>
+                        }
+                        else
+                        {
+                            <span>Vincular</span>
+                        }
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+
+            @if (_errorVinculacion is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true"
+                          ShowCloseIcon="true" CloseIconClicked="() => _errorVinculacion = null">
+                    @_errorVinculacion
+                </MudAlert>
+            }
+
+            @if (_exitoVinculacion)
+            {
+                <MudAlert Severity="Severity.Success" Class="mt-3" Dense="true">
+                    ¡Planilla vinculada exitosamente! Ya puedes comenzar a predecir.
+                </MudAlert>
+            }
+        </MudPaper>
+    }
+
+    @* ── Lista de planillas ──────────────────────────────────────────────── *@
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else if (_planillas.Count == 0)
+    {
+        <MudPaper Elevation="1" Class="pa-8 text-center rounded-lg">
+            <MudIcon Icon="@Icons.Material.Filled.Inbox"
+                     Style="font-size:3rem; opacity:.3;"
+                     Class="mb-3" />
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                No tienes planillas vinculadas aún.
+            </MudText>
+        </MudPaper>
+    }
+    else
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">
+            Mis planillas (@_planillas.Count)
+        </MudText>
+
+        @foreach (var planilla in _planillas)
+        {
+            <MudPaper Elevation="2" Class="pa-4 mb-3 rounded-lg">
+                <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+
+                    <div class="d-flex align-center gap-3">
+                        <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber"
+                                 Color="Color.Primary" />
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight:700;">
+                                @planilla.Codigo
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Vinculada: @planilla.AssignedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                            </MudText>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-center gap-2">
+                        @* Chip de estado *@
+                        <MudChip T="string"
+                                 Color="@GetColorEstado(planilla.Estado)"
+                                 Size="Size.Small">
+                            @GetLabelEstado(planilla.Estado)
+                        </MudChip>
+
+                        @* Puntaje si tiene *@
+                        @if (planilla.PuntajeTotal > 0)
+                        {
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small"
+                                     Icon="@Icons.Material.Filled.Star">
+                                @planilla.PuntajeTotal pts
+                            </MudChip>
+                        }
+
+                        @* Botón de acción *@
+                        @if (planilla.Estado == EstadoPlanilla.Cerrada || _quinielaCerrada)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                       Size="Size.Small"
+                                       Color="Color.Secondary"
+                                       StartIcon="@Icons.Material.Filled.Visibility"
+                                       Href="@($"/planilla/{planilla.Id}")">
+                                Ver
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Edit"
+                                       Href="@($"/planilla/{planilla.Id}")">
+                                Predecir
+                            </MudButton>
+                        }
+                    </div>
+                </div>
+            </MudPaper>
+        }
+    }
+
+</MudContainer>

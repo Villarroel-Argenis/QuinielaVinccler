@@ -1,5 +1,5 @@
 ﻿namespace QuinielaVinccler.UI.Web.Components.Pages;
-
+using Color = MudBlazor.Color;
 public partial class MisPlanillas : ComponentBase
 {
     [Inject] private IPlanillaService PlanillaSvc { get; set; } = null!;
@@ -17,6 +17,12 @@ public partial class MisPlanillas : ComponentBase
     private bool _quinielaCerrada;
     private int _userId;
 
+    // Desvincular
+    private bool _showConfirmDesvincular;
+    private bool _desvinculando;
+    private string? _errorDesvincular;
+    private Planilla? _planillaSeleccionada;
+
     protected override async Task OnInitializedAsync()
     {
         var state = await AuthState;
@@ -30,6 +36,7 @@ public partial class MisPlanillas : ComponentBase
         _cargando = false;
     }
 
+    // ── Vincular ─────────────────────────────────────────────────────────────
     private async Task HandleKeyDownVincular(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !_vinculando) await VincularPlanilla();
@@ -69,13 +76,61 @@ public partial class MisPlanillas : ComponentBase
         }
     }
 
-    private static MudBlazor.Color GetColorEstado(EstadoPlanilla estado) => estado switch
+    // ── Desvincular ──────────────────────────────────────────────────────────
+    private void ConfirmarDesvincular(Planilla planilla)
     {
-        EstadoPlanilla.Asignada => MudBlazor.Color.Info,
-        EstadoPlanilla.EnProgreso => MudBlazor.Color.Warning,
-        EstadoPlanilla.Completa => MudBlazor.Color.Success,
-        EstadoPlanilla.Cerrada => MudBlazor.Color.Error,
-        _ => MudBlazor.Color.Default,
+        _planillaSeleccionada = planilla;
+        _errorDesvincular = null;
+        _showConfirmDesvincular = true;
+    }
+
+    private void CancelarDesvincular()
+    {
+        _showConfirmDesvincular = false;
+        _planillaSeleccionada = null;
+        _errorDesvincular = null;
+    }
+
+    private async Task EjecutarDesvincular()
+    {
+        if (_planillaSeleccionada is null) return;
+
+        _desvinculando = true;
+        _errorDesvincular = null;
+
+        try
+        {
+            var (exito, error) = await PlanillaSvc.DesvincularAsync(_planillaSeleccionada.Id, _userId);
+
+            if (exito)
+            {
+                _showConfirmDesvincular = false;
+                _planillaSeleccionada = null;
+                _planillas = await PlanillaSvc.GetPlanillasByUserAsync(_userId);
+            }
+            else
+            {
+                _errorDesvincular = error;
+            }
+        }
+        catch
+        {
+            _errorDesvincular = "Ocurrió un error inesperado. Intenta de nuevo.";
+        }
+        finally
+        {
+            _desvinculando = false;
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    private static Color GetColorEstado(EstadoPlanilla estado) => estado switch
+    {
+        EstadoPlanilla.Asignada => Color.Info,
+        EstadoPlanilla.EnProgreso => Color.Warning,
+        EstadoPlanilla.Completa => Color.Success,
+        EstadoPlanilla.Cerrada => Color.Error,
+        _ => Color.Default,
     };
 
     private static string GetLabelEstado(EstadoPlanilla estado) => estado switch

@@ -1,0 +1,17 @@
+﻿@page "/admin"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "SoloAdmin")]
+
+<PageTitle>Panel Administrador</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h5" Class="mb-4">Panel de Administrador</MudText>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
+
+        <!-- TAB 1: Generar Lotes -->
+        <MudTabPanel Text="Generar Planillas" Icon="@Icons.Material.Filled.Add">
+            <LoteComponent/>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>

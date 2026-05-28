@@ -1,0 +1,121 @@
+﻿<MudContainer Class="pa-4">
+    <MudText Typo="Typo.h6" Class="mb-3">Generar lote de planillas</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudNumericField @bind-Value="_cantidad"
+                             Label="Cantidad de planillas"
+                             Variant="Variant.Outlined"
+                             Min="1" Max="50" />
+        </MudItem>
+        <MudItem xs="12" sm="4" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="GenerarPlanillas"
+                       Disabled="_generando"
+                       StartIcon="@Icons.Material.Filled.Print">
+                @if (_generando)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Generando...</span>
+                }
+                else
+                {
+                    <span>Generar Lote</span>
+                }
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+
+    @if (_ultimoLote is not null)
+    {
+        <MudAlert Severity="Severity.Success" Class="mt-4">
+            Lote <strong>@_ultimoLote.Codigo</strong> generado con @_ultimoLote.Planillas.Count planillas.
+        </MudAlert>
+    }
+
+    @if (!string.IsNullOrEmpty(_error) && _ultimoLote is null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+    }
+
+    @if (_lotes.Any())
+    {
+        <MudText Typo="Typo.h6" Class="mt-6 mb-3">Lotes generados</MudText>
+        @foreach (var lote in _lotes)
+        {
+            <MudExpansionPanel Class="mb-2">
+                <TitleContent>
+                    <div class="d-flex align-center gap-4">
+                        <MudText Typo="Typo.subtitle1"><strong>@lote.Codigo</strong></MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">
+                            @lote.Cantidad planillas
+                        </MudChip>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                            @lote.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                                   Href="@($"/api/lote/{lote.Id}/pdf")"
+                                   Target="_blank">
+                            Imprimir PDF
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="() => ConfirmarEliminarLote(lote)">
+                            Eliminar
+                        </MudButton>
+                    </div>
+                </TitleContent>
+                <ChildContent>
+                    <MudTable Items="lote.Planillas" Hover="true" Striped="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Código</MudTh>
+                            <MudTh>Estado</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.Codigo</MudTd>
+                            <MudTd>
+                                @if (context.IsAssigned)
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Asignada</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">Sin asignar</MudChip>
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </ChildContent>
+            </MudExpansionPanel>
+        }
+    }
+</MudContainer>
+
+<MudDialog @bind-Visible="_showConfirmDelete">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Eliminar lote</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            ¿Estás seguro que deseas eliminar el lote <strong>@_seleccionado?.Codigo</strong>
+            con <strong>@_seleccionado?.Cantidad</strong> planillas?
+        </MudText>
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick='() => { _showConfirmDelete = false; _error = ""; }'>Cancelar</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="Eliminar">
+            Eliminar
+        </MudButton>
+    </DialogActions>
+</MudDialog>

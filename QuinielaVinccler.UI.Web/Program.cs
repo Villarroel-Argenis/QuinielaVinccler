@@ -1,32 +1,93 @@
-using MudBlazor.Services;
-using QuinielaVinccler.UI.Web.Components;
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MudBlazor services
-builder.Services.AddMudServices();
-
-// Add services to the container.
+// ── Razor + Blazor ───────────────────────────────────────────────────────────
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-var app = builder.Build();
+builder.Services.AddMudServices();
 
-// Configure the HTTP request pipeline.
+// ── Base de datos ────────────────────────────────────────────────────────────
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ── Autenticación por cookie ─────────────────────────────────────────────────
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.LogoutPath = "/api/auth/signout";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    });
+
+builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("SoloAdmin", p => p.RequireRole(AppRoles.Admin))
+    .AddPolicy("Registrado", p => p.RequireAuthenticatedUser());
+
+// ── Registrar servicios ────
+
+
+// ── HttpContext (necesario para CustomAuthStateProvider en Blazor Server) ────
+builder.Services.AddHttpContextAccessor();
+
+// ── Auth state provider personalizado ───────────────────────────────────────
+// Scoped: una instancia por circuito Blazor Server.
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddCascadingAuthenticationState();
+
+// ── Servicios de la app ──────────────────────────────────────────────────────
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILoteService,LoteService > ();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddHostedService<PendingLoginCleanupService>(); // BackgroundService: tarea en segundo plano
+builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
+// ────────────────────────────────────────────────────────────────────────────
+var app = builder.Build();
+// ────────────────────────────────────────────────────────────────────────────
+
+// ── Seed inicial ─────────────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        await DataSeeder.SeedAsync(db, config);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] {ex.Message}");
+    }
+}
+
+// ── Middleware pipeline ──────────────────────────────────────────────────────
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 
-
+app.UseAuthentication();   // ← antes de UseAuthorization
+app.UseAuthorization();    // ← antes de UseAntiforgery
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+// ── Endpoints ────────────────────────────────────────────────────────────────
+app.MapAuthEndpoints();
+app.MapLoteEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

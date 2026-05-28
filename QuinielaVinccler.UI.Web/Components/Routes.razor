@@ -1,6 +1,52 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿
+<CascadingAuthenticationState>
+
+    <Router AppAssembly="@typeof(Program).Assembly">
+
+        <Found Context="routeData">
+
+            <AuthorizeRouteView RouteData="@routeData"
+                                DefaultLayout="@typeof(Layout.MainLayout)">
+
+                <NotAuthorized>
+
+                    @if (context.User.Identity?.IsAuthenticated == true)
+                    {
+                        <MudText Typo="Typo.h6" Class="pa-8">
+                            No tienes permiso para acceder a esta página.
+                        </MudText>
+                    }
+                    else
+                    {
+                        <RedirectToLogin />
+                    }
+
+                </NotAuthorized>
+
+                <Authorizing>
+                    <MudProgressLinear Color="Color.Primary"
+                                       Indeterminate="true" />
+                </Authorizing>
+
+            </AuthorizeRouteView>
+
+            <FocusOnNavigate RouteData="@routeData"
+                             Selector="h1" />
+
+        </Found>
+
+        <NotFound>
+
+            <PageTitle>404 – Página no encontrada</PageTitle>
+
+            <LayoutView Layout="@typeof(Layout.MainLayout)">
+                <MudText Typo="Typo.h6" Class="pa-8">
+                    La página que buscas no existe.
+                </MudText>
+            </LayoutView>
+
+        </NotFound>
+
+    </Router>
+
+</CascadingAuthenticationState>

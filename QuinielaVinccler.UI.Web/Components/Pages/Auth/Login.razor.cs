@@ -23,7 +23,7 @@ public partial class Login : ComponentBase
         if (state.User.Identity?.IsAuthenticated == true)
         {
             var role = state.User.FindFirst(ClaimTypes.Role)?.Value;
-            Nav.NavigateTo(role == "Admin" ? "/admin" : "/mis-planillas", replace: true);
+            Nav.NavigateTo(role == AppRoles.Admin ? "/admin" : "/mis-planillas", replace: true);
             return;
         }
 

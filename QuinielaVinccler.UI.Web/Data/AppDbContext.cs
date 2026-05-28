@@ -11,7 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<AppUser>(entity =>
         {
             entity.HasIndex(u => u.Email).IsUnique();
-            entity.Property(u => u.Role).HasDefaultValue("Common");
+            entity.Property(u => u.Role).HasDefaultValue(AppRoles.Common);
             entity.Property(u => u.Email).IsRequired();
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.FullName).IsRequired();

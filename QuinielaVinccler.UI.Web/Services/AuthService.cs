@@ -36,7 +36,7 @@ public class AuthService(AppDbContext db)
             FullName = fullName.Trim(),
             CI = ci.Trim(),
             Telefono = telefono.Trim(),
-            Role = "Common",
+            Role = AppRoles.Common,
             CreatedAt = DateTime.UtcNow
         });
 

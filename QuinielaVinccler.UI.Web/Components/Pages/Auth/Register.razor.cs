@@ -41,21 +41,12 @@ public partial class Register
 
         try
         {
-            var (success, error) = await AuthSvc.RegisterAsync(
-                _email, _password, _fullName, _ci, _telefono);
-
-            if (!success)
-            {
-                _error = error;
-                return;
-            }
-
-            // Auto-login tras registro exitoso
-            var user = await AuthSvc.LoginAsync(_email, _password);
+            var (user, error) = await AuthSvc.RegisterAsync(
+          _email, _password, _fullName, _ci, _telefono);
 
             if (user is null)
             {
-                Nav.NavigateTo("/login", forceLoad: true);
+                _error = error;
                 return;
             }
 

@@ -19,24 +19,23 @@ public class AuthService(AppDbContext db)
         return (user is not null && valid) ? user : null;
     }
 
-    public async Task<(bool Success, string? Error)> RegisterAsync(
-        string email, string password, string fullName, string ci, string telefono)
+    public async Task<(AppUser? User, string? Error)> RegisterAsync(
+    string email, string password, string fullName, string ci, string telefono)
     {
         if (!IsValidEmail(email))
-            return (false, "Correo electrónico no válido.");
+            return (null, "Correo electrónico no válido.");
 
         if (password.Length < 6)
-            return (false, "La contraseña debe tener al menos 6 caracteres.");
+            return (null, "La contraseña debe tener al menos 6 caracteres.");
 
         if (string.IsNullOrWhiteSpace(fullName))
-            return (false, "El nombre completo es requerido.");
+            return (null, "El nombre completo es requerido.");
 
         email = email.ToLower().Trim();
 
-        if (await db.Users.AnyAsync(u => u.Email == email))
-            return (false, "Ya existe una cuenta registrada con este correo.");
+      
 
-        db.Users.Add(new AppUser
+        var user = new AppUser
         {
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
@@ -44,11 +43,21 @@ public class AuthService(AppDbContext db)
             CI = ci.Trim(),
             Telefono = telefono.Trim(),
             Role = AppRoles.Common,
-            CreatedAt = DateTime.UtcNow
-        });
+        };
 
-        await db.SaveChangesAsync();
-        return (true, null);
+        db.Users.Add(user);
+
+        try
+        {
+            await db.SaveChangesAsync();
+            return (user, null);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException?.Message.Contains("duplicate key") == true
+               || ex.InnerException?.Message.Contains("unique constraint") == true)
+        {
+            return (null, "Ya existe una cuenta registrada con este correo.");
+        }
     }
 
     public ClaimsPrincipal BuildPrincipal(AppUser user)

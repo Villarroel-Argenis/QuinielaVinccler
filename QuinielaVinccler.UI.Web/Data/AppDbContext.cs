@@ -36,15 +36,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(p => p.Estado).HasConversion<string>();
             entity.Ignore(p => p.IsAssigned);
 
-            entity.HasOne(p => p.User)
-                  .WithMany()
-                  .HasForeignKey(p => p.UserId)
-                  .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasOne(p => p.Lote)
-                  .WithMany(l => l.Planillas)
-                  .HasForeignKey(p => p.LoteId)
-                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.User).WithMany()
+                  .HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(p => p.Lote).WithMany(l => l.Planillas)
+                  .HasForeignKey(p => p.LoteId).OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(p => p.UserId);
             entity.HasIndex(p => p.LoteId);
@@ -76,11 +71,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasIndex(p => new { p.PlanillaId, p.PartidoId }).IsUnique();
             entity.Property(p => p.ResultadoPredicho).HasConversion<string>();
 
-            entity.HasOne(p => p.Planilla)
-                  .WithMany(pl => pl.PrediccionesGrupo)
-                  .HasForeignKey(p => p.PlanillaId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
+            entity.HasOne(p => p.Planilla).WithMany(pl => pl.PrediccionesGrupo)
+                  .HasForeignKey(p => p.PlanillaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(p => p.Partido).WithMany()
                   .HasForeignKey(p => p.PartidoId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -89,26 +81,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.HasIndex(p => new { p.PlanillaId, p.PartidoId }).IsUnique();
 
-            entity.HasOne(p => p.Planilla)
-                  .WithMany(pl => pl.PrediccionesKnockout)
-                  .HasForeignKey(p => p.PlanillaId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
+            entity.HasOne(p => p.Planilla).WithMany(pl => pl.PrediccionesKnockout)
+                  .HasForeignKey(p => p.PlanillaId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(p => p.Partido).WithMany()
                   .HasForeignKey(p => p.PartidoId).OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(p => p.EquipoPredichado).WithMany()
-                  .HasForeignKey(p => p.EquipoPredichoId).OnDelete(DeleteBehavior.SetNull);
+            // R32: slots predichos
+            entity.HasOne(p => p.EquipoLocalPredichado).WithMany()
+                  .HasForeignKey(p => p.EquipoLocalPredichoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(p => p.EquipoVisitantePredichado).WithMany()
+                  .HasForeignKey(p => p.EquipoVisitantePredichoId).OnDelete(DeleteBehavior.SetNull);
+
+            // R16+: ganador predicho
+            entity.HasOne(p => p.EquipoGanador).WithMany()
+                  .HasForeignKey(p => p.EquipoGanadorId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<PrediccionFinal>(entity =>
         {
             entity.HasIndex(p => p.PlanillaId).IsUnique();
 
-            entity.HasOne(p => p.Planilla)
-                  .WithOne(pl => pl.PrediccionFinal)
-                  .HasForeignKey<PrediccionFinal>(p => p.PlanillaId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(p => p.Planilla).WithOne(pl => pl.PrediccionFinal)
+                  .HasForeignKey<PrediccionFinal>(p => p.PlanillaId).OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(p => p.Campeon).WithMany()
                   .HasForeignKey(p => p.CampeonEquipoId).OnDelete(DeleteBehavior.SetNull);

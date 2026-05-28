@@ -56,7 +56,9 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
             {
                 PlanillaId = planilla.Id,
                 PartidoId = id,
-                EquipoPredichoId = null,
+                EquipoLocalPredichoId = null,
+                EquipoVisitantePredichoId = null,
+                EquipoGanadorId = null,
                 PuntosObtenidos = null,
             }));
 

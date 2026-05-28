@@ -29,10 +29,6 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SoloAdmin", p => p.RequireRole(AppRoles.Admin))
     .AddPolicy("Registrado", p => p.RequireAuthenticatedUser());
 
-// ── Registrar servicios ────
-builder.Services.AddScoped<LoteService>();
-builder.Services.AddScoped<PdfService>();
-
 // ── HttpContext (necesario para CustomAuthStateProvider en Blazor Server) ────
 builder.Services.AddHttpContextAccessor();
 
@@ -44,6 +40,9 @@ builder.Services.AddCascadingAuthenticationState();
 // ── Servicios de la app ──────────────────────────────────────────────────────
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
+builder.Services.AddScoped<LoteService>();
+builder.Services.AddScoped<PdfService>();
+builder.Services.AddHostedService<PendingLoginCleanupService>();
 
 // ────────────────────────────────────────────────────────────────────────────
 QuestPDF.Settings.License = LicenseType.Community;

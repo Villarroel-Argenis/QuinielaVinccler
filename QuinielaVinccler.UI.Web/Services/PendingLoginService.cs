@@ -19,4 +19,14 @@ public class PendingLoginService
 
         return null;
     }
+
+    public void Cleanup()
+    {
+        var now = DateTime.UtcNow;
+        foreach (var key in _pending.Keys)
+        {
+            if (_pending.TryGetValue(key, out var entry) && entry.Expiry <= now)
+                _pending.TryRemove(key, out _);
+        }
+    }
 }

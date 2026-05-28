@@ -1,6 +1,3 @@
-
-using Microsoft.AspNetCore.Authorization;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Razor + Blazor ───────────────────────────────────────────────────────────
@@ -10,8 +7,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 
 // ── Base de datos ────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContextPool<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
+    poolSize: 128);
 
 // ── Autenticación por cookie ─────────────────────────────────────────────────
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

@@ -2,7 +2,7 @@
 
 public partial class Register
 {
-    [Inject] private AuthService AuthSvc { get; set; } = null!;
+    [Inject] private IAuthService AuthSvc { get; set; } = null!;
     [Inject] private PendingLoginService PendingLogin { get; set; } = null!;
     [Inject] private NavigationManager Nav { get; set; } = null!;
 

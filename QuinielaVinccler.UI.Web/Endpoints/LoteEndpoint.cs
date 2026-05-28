@@ -4,7 +4,11 @@ public static class LoteEndpoints
 {
     public static void MapLoteEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/lote/{loteId}/pdf", async (int loteId, AppDbContext db, PdfService pdfService) =>
+        app.MapGet("/api/lote/{loteId}/pdf", async (
+         int loteId,
+         AppDbContext db,
+         [FromServices] IPdfService pdfService,
+         [FromServices] ILogger<Program> logger) =>
         {
             var lote = await db.Lotes
                 .Include(l => l.Planillas)
@@ -12,10 +16,18 @@ public static class LoteEndpoints
 
             if (lote is null) return Results.NotFound();
 
+            var sw = Stopwatch.StartNew();
+            var pdf = await Task.Run(() => pdfService.GenerarLotePdf(lote));
+            sw.Stop();
 
-            var pdf = pdfService.GenerarLotePdf(lote);
+            logger.LogInformation(
+                "PDF generado: {Planillas} planillas en {Ms}ms ({Kb}KB)",
+                lote.Planillas.Count,
+                sw.ElapsedMilliseconds,
+                pdf.Length / 1024);
 
             return Results.File(pdf, "application/pdf", $"Lote-{lote.Codigo}.pdf");
-        });
+        })
+     .RequireAuthorization("SoloAdmin");
     }
 }

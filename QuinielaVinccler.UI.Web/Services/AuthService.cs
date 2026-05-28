@@ -1,6 +1,6 @@
 ﻿namespace QuinielaVinccler.UI.Web.Services;
 
-public class AuthService(AppDbContext db)
+public class AuthService(AppDbContext db) : IAuthService
 {
     private const string DummyHash = "$2a$11$jEZEOC5QdetIWnW7WW1fk.SKhMoJdLI9kFXSnWqj25zKO.BzR3sJe";
 

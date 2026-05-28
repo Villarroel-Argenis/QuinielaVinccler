@@ -1,6 +1,6 @@
 ﻿namespace QuinielaVinccler.UI.Web.Services;
 
-public class LoteService(AppDbContext db)
+public class LoteService(AppDbContext db) : ILoteService
 {
     public async Task<Lote> CreateAsync(int cantidad)
     {
@@ -9,27 +9,36 @@ public class LoteService(AppDbContext db)
             Codigo = $"L-{Random.Shared.Next(10000000, 99999999)}",
             Cantidad = cantidad
         };
-        db.Lotes.Add(lote);
-        await db.SaveChangesAsync();
 
-        var planillas = new List<Planilla>();
-        for (int i = 0; i < cantidad; i++)
+        var codigos = await GenerarCodigosUnicosAsync(cantidad);
+        var planillas = codigos.Select(codigo => new Planilla
         {
-            string codigo;
-            do { codigo = GenerarCodigo(); }
-            while (await db.Planillas.AnyAsync(p => p.Codigo == codigo));
+            Codigo = codigo,
+            LoteId = lote.Id
+        }).ToList();
 
-            planillas.Add(new Planilla
-            {
-                Codigo = codigo,
-                LoteId = lote.Id
-            });
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            db.Lotes.Add(lote);
+            await db.SaveChangesAsync();
+
+            // Asigna el LoteId real después del primer SaveChanges
+            planillas.ForEach(p => p.LoteId = lote.Id);
+
+            db.Planillas.AddRange(planillas);
+            await db.SaveChangesAsync();
+
+            await tx.CommitAsync();
         }
-        db.Planillas.AddRange(planillas);
-        await db.SaveChangesAsync();
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
 
         lote.Planillas = planillas;
-
         return lote;
     }
 
@@ -47,7 +56,8 @@ public class LoteService(AppDbContext db)
             .Include(l => l.Planillas)
             .FirstOrDefaultAsync(l => l.Id == loteId);
 
-        if (lote is null) return (false, "Lote no encontrado.");
+        if (lote is null)
+            return (false, "Lote no encontrado.");
 
         if (lote.Planillas.Any(p => p.IsAssigned))
             return (false, "No se puede eliminar el lote porque tiene planillas asignadas.");
@@ -59,11 +69,37 @@ public class LoteService(AppDbContext db)
         return (true, "Lote eliminado correctamente.");
     }
 
-
-    private static string GenerarCodigo()
+    private async Task<List<string>> GenerarCodigosUnicosAsync(int cantidad)
     {
-        var numero = Random.Shared.Next(10000000, 99999999);
-        return $"P-{numero}";
+        // Genera el doble de candidatos para absorber colisiones sin loops adicionales
+        var candidatos = Enumerable
+            .Range(0, cantidad * 2)
+            .Select(_ => GenerarCodigo())
+            .Distinct()
+            .ToList();
+
+        // Una sola query para verificar cuáles ya existen en la DB
+        var existentes = await db.Planillas
+            .Where(p => candidatos.Contains(p.Codigo))
+            .Select(p => p.Codigo)
+            .ToHashSetAsync();
+
+        var unicos = candidatos
+            .Where(c => !existentes.Contains(c))
+            .Take(cantidad)
+            .ToList();
+
+        // Fallback: si hubo demasiadas colisiones, completa uno por uno
+        while (unicos.Count < cantidad)
+        {
+            var extra = GenerarCodigo();
+            if (!existentes.Contains(extra) && !unicos.Contains(extra))
+                unicos.Add(extra);
+        }
+
+        return unicos;
     }
 
+    private static string GenerarCodigo() =>
+        $"P-{Random.Shared.Next(10000000, 99999999)}";
 }

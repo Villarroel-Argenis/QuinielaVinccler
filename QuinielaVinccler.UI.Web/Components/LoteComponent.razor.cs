@@ -10,7 +10,7 @@ public partial class LoteComponent
     private bool _showConfirmDelete = false;
     private string _error = "";
 
-    [Inject]private LoteService LoteService { get; set; } = default!;
+    [Inject]private ILoteService LoteService { get; set; } = default!;
 
     protected override async  Task OnInitializedAsync()
     {

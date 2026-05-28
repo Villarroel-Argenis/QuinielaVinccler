@@ -7,9 +7,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 
 // ── Base de datos ────────────────────────────────────────────────────────────
-builder.Services.AddDbContextPool<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
-    poolSize: 128);
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Autenticación por cookie ─────────────────────────────────────────────────
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -29,6 +28,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SoloAdmin", p => p.RequireRole(AppRoles.Admin))
     .AddPolicy("Registrado", p => p.RequireAuthenticatedUser());
 
+// ── Registrar servicios ────
+
+
 // ── HttpContext (necesario para CustomAuthStateProvider en Blazor Server) ────
 builder.Services.AddHttpContextAccessor();
 
@@ -38,15 +40,15 @@ builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>
 builder.Services.AddCascadingAuthenticationState();
 
 // ── Servicios de la app ──────────────────────────────────────────────────────
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILoteService,LoteService > ();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddHostedService<PendingLoginCleanupService>(); // BackgroundService: tarea en segundo plano
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
-builder.Services.AddScoped<LoteService>();
-builder.Services.AddScoped<PdfService>();
-builder.Services.AddHostedService<PendingLoginCleanupService>();
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // ────────────────────────────────────────────────────────────────────────────
-QuestPDF.Settings.License = LicenseType.Community;
-
 var app = builder.Build();
 // ────────────────────────────────────────────────────────────────────────────
 

@@ -28,9 +28,9 @@ public static class AuthEndpoints
             var destination = IsLocalUrl(returnUrl) ? returnUrl! : "/mis-planillas";
             return Results.Redirect(destination);
         })
-      .AllowAnonymous(); // ← crítico, sin esto hay loop infinito
+        .AllowAnonymous(); // ← crítico, sin esto hay loop infinito
 
-        app.MapGet("/api/auth/signout", async (HttpContext ctx) =>
+        app.MapPost("/api/auth/signout", async (HttpContext ctx) =>
         {
             await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Redirect("/login");

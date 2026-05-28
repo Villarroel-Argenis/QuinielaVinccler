@@ -55,9 +55,19 @@ var app = builder.Build();
 // ── Seed inicial ─────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    await DataSeeder.SeedAsync(db, config);
+    try
+    {
+
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        await DataSeeder.SeedAsync(db, config);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SEED ERROR] {ex.Message}");
+    }
 }
 
 // ── Middleware pipeline ──────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 public partial class Login : ComponentBase
 {
-    [Inject] private AuthService AuthSvc { get; set; } = null!;
+    [Inject] private IAuthService AuthSvc { get; set; } = null!;
     [Inject] private PendingLoginService PendingLogin { get; set; } = null!;
     [Inject] private NavigationManager Nav { get; set; } = null!;
 
@@ -15,26 +15,32 @@ public partial class Login : ComponentBase
     private bool _loading;
     private bool _showPassword;
     private bool _tokenExpired;
+    private string? _pendingToken;
+    private string? _returnUrl;
+    private bool _submitForm;
 
     protected override async Task OnInitializedAsync()
     {
+        var qs = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
+        _tokenExpired = qs.TryGetValue("error", out var val) && val == "expired";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
         var state = await AuthState;
 
         if (state.User.Identity?.IsAuthenticated == true)
         {
             var role = state.User.FindFirst(ClaimTypes.Role)?.Value;
             Nav.NavigateTo(role == AppRoles.Admin ? "/admin" : "/mis-planillas", replace: true);
-            return;
         }
-
-        var uri = new Uri(Nav.Uri);
-        var qs = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        _tokenExpired = qs["error"] == "expired";
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await HandleLogin();
+        if (e.Key == "Enter" && !_loading) await HandleLogin();
     }
 
     private async Task HandleLogin()
@@ -60,12 +66,10 @@ public partial class Login : ComponentBase
             }
 
             var principal = AuthSvc.BuildPrincipal(user);
-            var token = PendingLogin.Store(principal);
-            var returnUrl = user.Role == "Admin" ? "/admin" : "/mis-planillas";
-
-            Nav.NavigateTo(
-                $"/api/auth/signin?token={token}&returnUrl={Uri.EscapeDataString(returnUrl)}",
-                forceLoad: true);
+            _pendingToken = PendingLogin.Store(principal);
+            _returnUrl = user.Role == AppRoles.Admin ? "/admin" : "/mis-planillas";
+            _submitForm = true;
+            await InvokeAsync(StateHasChanged);
         }
         finally
         {

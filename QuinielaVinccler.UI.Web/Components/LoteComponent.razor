@@ -5,7 +5,7 @@
             <MudNumericField @bind-Value="_cantidad"
                              Label="Cantidad de planillas"
                              Variant="Variant.Outlined"
-                             Min="1" Max="100" />
+                             Min="1" Max="50" />
         </MudItem>
         <MudItem xs="12" sm="4" Class="d-flex align-center">
             <MudButton Variant="Variant.Filled"
@@ -13,7 +13,15 @@
                        OnClick="GenerarPlanillas"
                        Disabled="_generando"
                        StartIcon="@Icons.Material.Filled.Print">
-                Generar Lote
+                @if (_generando)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Generando...</span>
+                }
+                else
+                {
+                    <span>Generar Lote</span>
+                }
             </MudButton>
         </MudItem>
     </MudGrid>
@@ -23,6 +31,11 @@
         <MudAlert Severity="Severity.Success" Class="mt-4">
             Lote <strong>@_ultimoLote.Codigo</strong> generado con @_ultimoLote.Planillas.Count planillas.
         </MudAlert>
+    }
+
+    @if (!string.IsNullOrEmpty(_error) && _ultimoLote is null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
     }
 
     @if (_lotes.Any())
@@ -99,7 +112,9 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick='() => { _showConfirmDelete = false; _error = ""; }'>Cancelar</MudButton>
-        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Eliminar">
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="Eliminar">
             Eliminar
         </MudButton>
     </DialogActions>

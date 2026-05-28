@@ -9,7 +9,7 @@ public class Planilla
     public bool IsAssigned => UserId != null;
     public int? LoteId { get; set; }
     public Lote? Lote { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
     public DateTime? AssignedAt { get; set; }
     public DateTime? ActivatedAt { get; set; }
 }

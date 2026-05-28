@@ -1,6 +1,3 @@
-
-using Microsoft.AspNetCore.Authorization;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Razor + Blazor ───────────────────────────────────────────────────────────
@@ -27,9 +24,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("SoloAdmin", p => p.RequireRole(AppRoles.Admin))
+    .AddPolicy("Registrado", p => p.RequireAuthenticatedUser());
+
 // ── Registrar servicios ────
-builder.Services.AddScoped<LoteService>();
-builder.Services.AddScoped<PdfService>();
+
 
 // ── HttpContext (necesario para CustomAuthStateProvider en Blazor Server) ────
 builder.Services.AddHttpContextAccessor();
@@ -40,12 +40,15 @@ builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>
 builder.Services.AddCascadingAuthenticationState();
 
 // ── Servicios de la app ──────────────────────────────────────────────────────
-builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ILoteService,LoteService > ();
+builder.Services.AddScoped<IPdfService, PdfService>();
+builder.Services.AddHostedService<PendingLoginCleanupService>(); // BackgroundService: tarea en segundo plano
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP
 
-// ────────────────────────────────────────────────────────────────────────────
-QuestPDF.Settings.License = LicenseType.Community;
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
+// ────────────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 // ────────────────────────────────────────────────────────────────────────────
 

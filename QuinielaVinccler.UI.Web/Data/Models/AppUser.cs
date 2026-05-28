@@ -9,5 +9,5 @@ public class AppUser
     public string CI { get; set; } = string.Empty;
     public string Telefono { get; set; } = string.Empty;
     public string Role { get; set; } = "Common";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 }

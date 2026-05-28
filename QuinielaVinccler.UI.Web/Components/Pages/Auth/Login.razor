@@ -84,4 +84,18 @@
         </div>
 
     </MudPaper>
+    @* Fuera del MudPaper, al final del componente *@
+    @if (_submitForm && _pendingToken is not null)
+    {
+        <form id="signin-form"
+              method="post"
+              action="/api/auth/signin">
+            <input type="hidden" name="token" value="@_pendingToken" />
+            <input type="hidden" name="returnUrl" value="@_returnUrl" />
+        </form>
+
+        <script>
+                document.getElementById('signin-form').submit();
+        </script>
+    }
 </div>

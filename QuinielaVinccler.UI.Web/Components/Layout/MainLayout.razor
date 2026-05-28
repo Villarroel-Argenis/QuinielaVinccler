@@ -33,10 +33,13 @@
         <AuthorizeView>
             <Authorized>
                 <MudTooltip Text="Cerrar sesión">
-                    <MudIconButton Icon="@Icons.Material.Filled.Logout"
-                                   Color="Color.Inherit"
-                                   Edge="Edge.End"
-                                   Href="/api/auth/signout" />
+                    <form method="post" action="/api/auth/signout" style="display:contents;">
+                        <AntiforgeryToken />
+                        <MudIconButton ButtonType="ButtonType.Submit"
+                                       Icon="@Icons.Material.Filled.Logout"
+                                       Color="Color.Inherit"
+                                       Edge="Edge.End" />
+                    </form>
                 </MudTooltip>
             </Authorized>
         </AuthorizeView>

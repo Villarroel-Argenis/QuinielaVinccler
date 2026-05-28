@@ -15,6 +15,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(u => u.Email).IsRequired();
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.FullName).IsRequired();
+            entity.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<Planilla>(entity =>
+        {
+            entity.Property(p => p.CreatedAt).HasDefaultValueSql("now()");
+        });
+
+        modelBuilder.Entity<Lote>(entity =>
+        {
+            entity.Property(l => l.CreatedAt).HasDefaultValueSql("now()");
         });
     }
 }

@@ -1,6 +1,6 @@
 ﻿@page "/admin"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Policy = "SoloAdmin")]
 
 <PageTitle>Panel Administrador</PageTitle>
 

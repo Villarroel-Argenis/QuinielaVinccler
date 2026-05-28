@@ -3,6 +3,8 @@ global using Microsoft.AspNetCore.Authentication.Cookies;
 global using Microsoft.AspNetCore.Components;
 global using Microsoft.AspNetCore.Components.Authorization;
 global using Microsoft.AspNetCore.Components.Web;
+global using Microsoft.AspNetCore.Mvc;
+global using Microsoft.AspNetCore.WebUtilities;
 global using Microsoft.EntityFrameworkCore;
 global using MudBlazor;
 global using MudBlazor.Services;
@@ -15,9 +17,11 @@ global using QuinielaVinccler.UI.Web.Data.Models;
 global using QuinielaVinccler.UI.Web.Endpoints;
 global using QuinielaVinccler.UI.Web.Services;
 global using System.Collections.Concurrent;
+global using System.Diagnostics;
 global using System.Net.Mail;
 global using System.Security.Claims;
-global using System.Text.RegularExpressions;
+
+
 
 
 

@@ -1,15 +1,17 @@
 ﻿
+using Microsoft.AspNetCore.Mvc;
+
 namespace QuinielaVinccler.UI.Web.Endpoints;
 
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/auth/signin", async (
-          HttpContext ctx,
-          string token,
-          string? returnUrl,
-          PendingLoginService pending) =>
+        app.MapPost("/api/auth/signin", async (
+       HttpContext ctx,
+       PendingLoginService pending,
+       [FromForm] string token,
+       [FromForm] string? returnUrl) =>
         {
             var principal = pending.Consume(token);
 
@@ -28,9 +30,10 @@ public static class AuthEndpoints
             var destination = IsLocalUrl(returnUrl) ? returnUrl! : "/mis-planillas";
             return Results.Redirect(destination);
         })
-      .AllowAnonymous(); // ← crítico, sin esto hay loop infinito
+        .AllowAnonymous()
+        .DisableAntiforgery();
 
-        app.MapGet("/api/auth/signout", async (HttpContext ctx) =>
+        app.MapPost("/api/auth/signout", async (HttpContext ctx) =>
         {
             await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Redirect("/login");

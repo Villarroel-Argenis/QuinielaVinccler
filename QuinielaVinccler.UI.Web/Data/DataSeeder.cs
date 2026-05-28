@@ -24,8 +24,7 @@ public static class DataSeeder
             FullName = "Administrador",
             CI = "00000000",
             Telefono = "00000000000",
-            Role = AppRoles.Admin,
-            CreatedAt = DateTime.UtcNow
+            Role = AppRoles.Admin
         });
 
         await db.SaveChangesAsync();

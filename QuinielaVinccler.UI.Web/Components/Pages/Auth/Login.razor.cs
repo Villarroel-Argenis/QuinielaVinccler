@@ -15,6 +15,9 @@ public partial class Login : ComponentBase
     private bool _loading;
     private bool _showPassword;
     private bool _tokenExpired;
+    private string? _pendingToken;
+    private string? _returnUrl;
+    private bool _submitForm;
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,12 +66,10 @@ public partial class Login : ComponentBase
             }
 
             var principal = AuthSvc.BuildPrincipal(user);
-            var token = PendingLogin.Store(principal);
-            var returnUrl = user.Role == "Admin" ? "/admin" : "/mis-planillas";
-
-            Nav.NavigateTo(
-                $"/api/auth/signin?token={token}&returnUrl={Uri.EscapeDataString(returnUrl)}",
-                forceLoad: true);
+            _pendingToken = PendingLogin.Store(principal);
+            _returnUrl = user.Role == AppRoles.Admin ? "/admin" : "/mis-planillas";
+            _submitForm = true;
+            await InvokeAsync(StateHasChanged);
         }
         finally
         {

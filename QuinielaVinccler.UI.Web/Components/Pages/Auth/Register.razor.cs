@@ -18,6 +18,9 @@ public partial class Register
     private string? _error;
     private bool _loading;
     private bool _showPassword;
+    private string? _pendingToken;
+    private string? _returnUrl;
+    private bool _submitForm;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -53,11 +56,10 @@ public partial class Register
             }
 
             var principal = AuthSvc.BuildPrincipal(user);
-            var token = PendingLogin.Store(principal);
-
-            Nav.NavigateTo(
-                $"/api/auth/signin?token={token}&returnUrl={Uri.EscapeDataString("/mis-planillas")}",
-                forceLoad: true);
+            _pendingToken = PendingLogin.Store(principal);
+            _returnUrl = "/mis-planillas";
+            _submitForm = true;
+            await InvokeAsync(StateHasChanged);
         }
         finally
         {

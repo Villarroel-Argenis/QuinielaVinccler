@@ -25,6 +25,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("SoloAdmin", p => p.RequireRole(AppRoles.Admin))
+    .AddPolicy("Registrado", p => p.RequireAuthenticatedUser());
+
 // ── Registrar servicios ────
 builder.Services.AddScoped<LoteService>();
 builder.Services.AddScoped<PdfService>();

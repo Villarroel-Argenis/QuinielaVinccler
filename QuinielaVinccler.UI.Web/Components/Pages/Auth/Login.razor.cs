@@ -18,17 +18,21 @@ public partial class Login : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        var qs = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
+        _tokenExpired = qs.TryGetValue("error", out var val) && val == "expired";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
         var state = await AuthState;
 
         if (state.User.Identity?.IsAuthenticated == true)
         {
             var role = state.User.FindFirst(ClaimTypes.Role)?.Value;
             Nav.NavigateTo(role == AppRoles.Admin ? "/admin" : "/mis-planillas", replace: true);
-            return;
         }
-
-        var qs = QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query);
-        _tokenExpired = qs.TryGetValue("error", out var val) && val == "expired";
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)

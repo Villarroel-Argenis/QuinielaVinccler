@@ -19,8 +19,10 @@ public partial class Register
     private bool _loading;
     private bool _showPassword;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
+
         var state = await AuthState;
 
         if (state.User.Identity?.IsAuthenticated == true)

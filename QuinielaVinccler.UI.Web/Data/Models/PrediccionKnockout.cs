@@ -10,9 +10,18 @@ public class PrediccionKnockout
     public int PartidoId { get; set; }
     public Partido Partido { get; set; } = null!;
 
-    // null hasta que el usuario seleccione el equipo
-    public int? EquipoPredichoId { get; set; }
-    public Equipo? EquipoPredichado { get; set; }
+    // ── R32: el usuario predice qué equipo ocupa cada slot ───────────────────
+    // Solo aplica a partidos de Fase.RoundOf32
+    public int? EquipoLocalPredichoId { get; set; }
+    public Equipo? EquipoLocalPredichado { get; set; }
+
+    public int? EquipoVisitantePredichoId { get; set; }
+    public Equipo? EquipoVisitantePredichado { get; set; }
+
+    // ── R16+: el usuario predice el ganador del partido ──────────────────────
+    // Solo aplica a RoundOf16, Cuartos, Semis, TercerPuesto, Final
+    public int? EquipoGanadorId { get; set; }
+    public Equipo? EquipoGanador { get; set; }
 
     // null hasta que el partido se juegue
     public int? PuntosObtenidos { get; set; }

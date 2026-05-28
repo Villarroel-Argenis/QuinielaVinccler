@@ -3,6 +3,6 @@
 public enum ResultadoPartido 
 { 
     Uno, 
-    Empate, 
+    Equis, 
     Dos 
 }

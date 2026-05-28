@@ -12,14 +12,11 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
 
     public async Task<(bool Exito, string? Error)> VincularAsync(string codigo, int userId)
     {
-        // Normaliza el código
         codigo = codigo.Trim().ToUpper();
 
-        // Verifica que la quiniela esté abierta
         if (await configuracion.QuinielaCerradaAsync())
             return (false, "La quiniela está cerrada. No se pueden vincular más planillas.");
 
-        // Busca la planilla
         var planilla = await db.Planillas
             .FirstOrDefaultAsync(p => p.Codigo == codigo);
 
@@ -29,7 +26,6 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
         if (planilla.IsAssigned)
             return (false, "Esta planilla ya fue vinculada a otra cuenta.");
 
-        // Obtiene los IDs de todos los partidos
         var idsGrupos = await db.Partidos
             .Where(p => p.Fase == Fase.Grupos)
             .Select(p => p.Id)
@@ -44,38 +40,79 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
 
         try
         {
-            // Vincula la planilla al usuario
             planilla.UserId = userId;
             planilla.AssignedAt = DateTime.UtcNow;
             planilla.Estado = EstadoPlanilla.Asignada;
 
-            // Crea registros vacíos de predicciones de grupo (72 filas)
-            var prediccionesGrupo = idsGrupos.Select(partidoId => new PrediccionGrupo
+            db.PrediccionesGrupo.AddRange(idsGrupos.Select(id => new PrediccionGrupo
             {
                 PlanillaId = planilla.Id,
-                PartidoId = partidoId,
+                PartidoId = id,
                 ResultadoPredicho = null,
                 PuntosObtenidos = null,
-            }).ToList();
+            }));
 
-            // Crea registros vacíos de predicciones knockout (32 filas)
-            var prediccionesKnockout = idsKnockout.Select(partidoId => new PrediccionKnockout
+            db.PrediccionesKnockout.AddRange(idsKnockout.Select(id => new PrediccionKnockout
             {
                 PlanillaId = planilla.Id,
-                PartidoId = partidoId,
-                EquipoPredichoId = null,
+                PartidoId = id,
+                EquipoLocalPredichoId = null,
+                EquipoVisitantePredichoId = null,
+                EquipoGanadorId = null,
                 PuntosObtenidos = null,
-            }).ToList();
+            }));
 
-            // Crea el registro de predicción final (1 fila)
-            var prediccionFinal = new PrediccionFinal
-            {
-                PlanillaId = planilla.Id,
-            };
+            db.PrediccionesFinal.Add(new PrediccionFinal { PlanillaId = planilla.Id });
 
-            db.PrediccionesGrupo.AddRange(prediccionesGrupo);
-            db.PrediccionesKnockout.AddRange(prediccionesKnockout);
-            db.PrediccionesFinal.Add(prediccionFinal);
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            return (true, null);
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<(bool Exito, string? Error)> DesvincularAsync(int planillaId, int userId)
+    {
+        var planilla = await db.Planillas
+            .FirstOrDefaultAsync(p => p.Id == planillaId && p.UserId == userId);
+
+        if (planilla is null)
+            return (false, "Planilla no encontrada.");
+
+        if (planilla.Estado == EstadoPlanilla.Cerrada)
+            return (false, "No se puede desvincular una planilla cerrada.");
+
+        if (await configuracion.QuinielaCerradaAsync())
+            return (false, "La quiniela está cerrada. No se pueden desvincular planillas.");
+
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Elimina predicciones — el cascade de FK se encarga,
+            // pero lo hacemos explícito para evitar depender de la configuración del servidor
+            await db.PrediccionesGrupo
+                .Where(p => p.PlanillaId == planillaId)
+                .ExecuteDeleteAsync();
+
+            await db.PrediccionesKnockout
+                .Where(p => p.PlanillaId == planillaId)
+                .ExecuteDeleteAsync();
+
+            await db.PrediccionesFinal
+                .Where(p => p.PlanillaId == planillaId)
+                .ExecuteDeleteAsync();
+
+            // Resetea la planilla
+            planilla.UserId = null;
+            planilla.AssignedAt = null;
+            planilla.Estado = EstadoPlanilla.SinAsignar;
+            planilla.PuntajeTotal = 0;
 
             await db.SaveChangesAsync();
             await tx.CommitAsync();

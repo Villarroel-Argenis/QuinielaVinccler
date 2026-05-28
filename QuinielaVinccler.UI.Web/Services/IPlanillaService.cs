@@ -3,5 +3,6 @@
 public interface IPlanillaService
 {
     Task<(bool Exito, string? Error)> VincularAsync(string codigo, int userId);
+    Task<(bool Exito, string? Error)> DesvincularAsync(int planillaId, int userId);
     Task<List<Planilla>> GetPlanillasByUserAsync(int userId);
 }

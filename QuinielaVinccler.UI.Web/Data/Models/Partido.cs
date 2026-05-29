@@ -26,4 +26,9 @@ public class Partido
     // Ganador eliminatoria
     public int? EquipoGanadorId { get; set; }
     public Equipo? EquipoGanador { get; set; }
+
+    // Marcador exacto a 90 minutos — solo relevante para #101, #102 y #104
+    // (Semis y Gran Final — para cálculo de 100pts de resultado exacto)
+    public int? GolesLocal { get; set; }
+    public int? GolesVisitante { get; set; }
 }

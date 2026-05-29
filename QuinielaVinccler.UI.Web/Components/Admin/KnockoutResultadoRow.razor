@@ -1,0 +1,58 @@
+@namespace QuinielaVinccler.UI.Web.Components.Admin
+
+<MudPaper Elevation="1" Class="pa-3 mb-3 rounded">
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+        Partido #@Pred.NumeroPartido
+        <span style="opacity:0.6; margin-left:8px;">
+            @Pred.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+        </span>
+    </MudText>
+
+    <div class="d-flex align-center gap-3 flex-wrap">
+
+        @* ── Equipo Local ─────────────────────────────────────────────────── *@
+        <MudButton Variant="@(GanadorId == Pred.EquipoLocalId ? Variant.Filled : Variant.Outlined)"
+                   Color="@(GanadorId == Pred.EquipoLocalId ? Color.Primary : Color.Default)"
+                   OnClick="() => OnGanadorChanged.InvokeAsync(Pred.EquipoLocalId)"
+                   Disabled="Pred.EquipoLocalId is null"
+                   Style="min-width:160px;">
+            @if (Pred.EquipoLocal is not null)
+            {
+                <img src="@Pred.EquipoLocal.FlagUrl" style="height:16px; margin-right:6px;" />
+                @Pred.EquipoLocal.Nombre
+            }
+            else
+            {
+                <span class="mud-text-secondary">Por definir</span>
+            }
+        </MudButton>
+
+        <MudText Typo="Typo.body1" Color="Color.Secondary">vs</MudText>
+
+        @* ── Equipo Visitante ─────────────────────────────────────────────── *@
+        <MudButton Variant="@(GanadorId == Pred.EquipoVisitanteId ? Variant.Filled : Variant.Outlined)"
+                   Color="@(GanadorId == Pred.EquipoVisitanteId ? Color.Primary : Color.Default)"
+                   OnClick="() => OnGanadorChanged.InvokeAsync(Pred.EquipoVisitanteId)"
+                   Disabled="Pred.EquipoVisitanteId is null"
+                   Style="min-width:160px;">
+            @if (Pred.EquipoVisitante is not null)
+            {
+                <img src="@Pred.EquipoVisitante.FlagUrl" style="height:16px; margin-right:6px;" />
+                @Pred.EquipoVisitante.Nombre
+            }
+            else
+            {
+                <span class="mud-text-secondary">Por definir</span>
+            }
+        </MudButton>
+
+        @* ── Limpiar ──────────────────────────────────────────────────────── *@
+        @if (GanadorId.HasValue)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Clear"
+                           Size="Size.Small"
+                           Color="Color.Error"
+                           OnClick="() => OnGanadorChanged.InvokeAsync(null)" />
+        }
+    </div>
+</MudPaper>

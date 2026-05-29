@@ -1,0 +1,408 @@
+@namespace QuinielaVinccler.UI.Web.Components.Admin
+@using QuinielaVinccler.UI.Web.Components.Shared
+
+<MudContainer Class="pa-4" MaxWidth="MaxWidth.Large">
+
+    <div class="d-flex justify-end mb-3">
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                   OnClick="AbrirResetPuntos">
+            Resetear todos los puntos
+        </MudButton>
+    </div>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4"
+              @bind-ActivePanelIndex="_tabIndex">
+
+        @* ── Fase de Grupos ───────────────────────────────────────────────── *@
+        <MudTabPanel Text="Fase de Grupos">
+            @if (_cargando)
+            {
+                <div class="d-flex justify-center pa-8">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+                </div>
+            }
+            else
+            {
+                @foreach (var (grupo, partidos) in _grupoMap)
+                {
+                    <div class="d-flex align-center px-1 pt-4 pb-1 mb-1">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight:700;">Grupo @grupo</MudText>
+                    </div>
+                    <MudPaper Elevation="1" Class="mb-3 rounded">
+                        @foreach (var partido in partidos)
+                        {
+                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary partido-fecha">
+                                    @partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+                                </MudText>
+                                <div class="grupo-fila__equipos">
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        <img src="@partido.EquipoLocal!.FlagUrl" style="height:16px; flex-shrink:0;" />
+                                        <MudText Typo="Typo.body2"
+                                                 Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                            @partido.EquipoLocal.Nombre
+                                        </MudText>
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="flex-shrink:0; padding:0 4px;">vs</MudText>
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        <img src="@partido.EquipoVisitante!.FlagUrl" style="height:16px; flex-shrink:0;" />
+                                        <MudText Typo="Typo.body2"
+                                                 Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                            @partido.EquipoVisitante.Nombre
+                                        </MudText>
+                                    </div>
+                                </div>
+                                <div class="grupo-fila__botones">
+                                    @foreach (var r in new[] { ResultadoPartido.Uno, ResultadoPartido.Equis, ResultadoPartido.Dos })
+                                    {
+                                        <MudButton Size="Size.Small"
+                                                   Variant="@(GetResultadoGrupo(partido.Id) == r ? Variant.Filled : Variant.Outlined)"
+                                                   Color="@(GetResultadoGrupo(partido.Id) == r ? Color.Primary : Color.Default)"
+                                                   OnClick="() => SetResultadoGrupo(partido.Id, GetResultadoGrupo(partido.Id) == r ? (ResultadoPartido?)null : r)"
+                                                   Style="min-width:36px; padding:0 4px;">
+                                            @GetLabelResultado(r)
+                                        </MudButton>
+                                    }
+                                    @if (GetResultadoGrupo(partido.Id).HasValue)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Clear"
+                                                       Size="Size.Small" Color="Color.Error"
+                                                       OnClick="() => SetResultadoGrupo(partido.Id, null)" />
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </MudPaper>
+                }
+            }
+        </MudTabPanel>
+
+        @* ── Dieciseisavos ────────────────────────────────────────────────── *@
+        <MudTabPanel Text="Dieciseisavos">
+            @if (!_cargando)
+            {
+                @foreach (var p in _r32)
+                {
+                    <R32ResultadoRow Partido="p"
+                                     EquiposById="_equiposById"
+                                     GetCandidatos="GetCandidatosR32"
+                                     EquipoLocalId="@GetR32Local(p.Id)"
+                                     EquipoVisitanteId="@GetR32Visitante(p.Id)"
+                                     OnEquipoLocalChanged="v => SetR32Local(p.Id, v)"
+                                     OnEquipoVisitanteChanged="v => SetR32Visitante(p.Id, v)" />
+                }
+            }
+        </MudTabPanel>
+
+        <MudTabPanel Text="Octavos">
+            @TabKnockout(_r16, TabResultado.R16)
+        </MudTabPanel>
+
+        <MudTabPanel Text="Cuartos de Final">
+            @TabKnockout(_cuartos, TabResultado.Cuartos)
+        </MudTabPanel>
+
+        <MudTabPanel Text="Semifinales">
+            @TabKnockout(_semis, TabResultado.Semis)
+        </MudTabPanel>
+
+        <MudTabPanel Text="3° y 4° Puesto">
+            @if (_tercero is not null)
+            {
+                <KnockoutResultadoRow Pred="_tercero"
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(_tercero.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(_tercero.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(_tercero.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(_tercero.Id, v)" />
+            }
+        </MudTabPanel>
+
+        <MudTabPanel Text="Gran Final">
+            @if (_finalPartido is not null)
+            {
+                <MudText Typo="Typo.subtitle2" Class="mb-3">
+                    Partido #@_finalPartido.NumeroPartido — Ganador de la final
+                </MudText>
+                <KnockoutResultadoRow Pred="_finalPartido"
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(_finalPartido.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(_finalPartido.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(_finalPartido.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(_finalPartido.Id, v)" />
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mb-3">
+                    Marcadores exactos a 90 minutos (100 pts c/u)
+                </MudText>
+
+                @FilaScore("Resultados Semi Final 1 · a los 90 min (Partido #101)", "sf1L", "sf1V",
+                    _marcadorSemi1Local, _marcadorSemi1Visitante,
+                    v => _marcadorSemi1Local = v, v => _marcadorSemi1Visitante = v)
+
+                @FilaScore("Resultados Semi Final 2 · a los 90 min (Partido #102)", "sf2L", "sf2V",
+                    _marcadorSemi2Local, _marcadorSemi2Visitante,
+                    v => _marcadorSemi2Local = v, v => _marcadorSemi2Visitante = v)
+
+                @FilaScore("Resultados Gran Final · a los 90 min (Partido #104)", "finL", "finV",
+                    _marcadorFinalLocal, _marcadorFinalVisitante,
+                    v => _marcadorFinalLocal = v, v => _marcadorFinalVisitante = v)
+            }
+        </MudTabPanel>
+
+        @* ── Posiciones Finales ───────────────────────────────────────────── *@
+        <MudTabPanel Text="Posiciones Finales">
+            @if (_resultadoFinal is not null)
+            {
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mb-3">
+                            Posiciones finales
+                        </MudText>
+                    </MudItem>
+
+                    @{
+                        var campeonKey  = "r-campeon";
+                        var segundoKey  = "r-segundo";
+                        var terceroKey  = "r-tercero";
+                        var cuartoKey   = "r-cuarto";
+                        var masGolKey   = "r-masGoleador";
+                        var masGoldKey  = "r-masGoleado";
+                        var menosGolKey = "r-menosGoleado";
+                    }
+
+                    <FinalEquipoRow Label="Campeón (300 pts)"
+                                    ValorActual="_resultadoFinal.CampeonEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.CampeonEquipoId = v" />
+
+                    <FinalEquipoRow Label="2° Lugar (200 pts)"
+                                    ValorActual="_resultadoFinal.SegundoLugarEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.SegundoLugarEquipoId = v" />
+
+                    <FinalEquipoRow Label="3er Lugar (100 pts)"
+                                    ValorActual="_resultadoFinal.TercerLugarEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.TercerLugarEquipoId = v" />
+
+                    <FinalEquipoRow Label="4° Lugar (50 pts)"
+                                    ValorActual="_resultadoFinal.CuartoLugarEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.CuartoLugarEquipoId = v" />
+
+                    <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
+
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mb-3">
+                            Extras fase eliminatoria (100 pts c/u)
+                        </MudText>
+                    </MudItem>
+
+                    <FinalEquipoRow Label="Equipo más goleador (Fase eliminatoria)"
+                                    ValorActual="_resultadoFinal.MasGoleadorEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.MasGoleadorEquipoId = v" />
+
+                    <FinalEquipoRow Label="Equipo más goleado (Fase eliminatoria)"
+                                    ValorActual="_resultadoFinal.MasGoleadoEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.MasGoleadoEquipoId = v" />
+
+                    <FinalEquipoRow Label="Equipo menos goleado (Fase eliminatoria)"
+                                    ValorActual="_resultadoFinal.MenosGoleadoEquipoId"
+                                    Equipos="_equipos"
+                                    EquiposById="_equiposById"
+                                    SoloLectura="false"
+                                    MostrarCheckmark="false"
+                                    OnValorChanged="v => _resultadoFinal.MenosGoleadoEquipoId = v" />
+
+                    <MudItem xs="12">
+                    </MudItem>
+                </MudGrid>
+            }
+        </MudTabPanel>
+
+    </MudTabs>
+</MudContainer>
+
+@* ── Dialog resetear puntos ─────────────────────────────────────────────── *@
+<MudDialog @bind-Visible="_showResetPuntos">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+            <MudText Typo="Typo.h6">Resetear todos los puntos</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Error" Dense="true">
+            Esta acción pondrá en <strong>0</strong> el puntaje de <strong>todas las planillas</strong>.
+            Úsala solo si borraste todos los resultados. No se puede deshacer.
+        </MudAlert>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showResetPuntos = false">Cancelar</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled"
+                   OnClick="EjecutarResetPuntos"
+                   StartIcon="@Icons.Material.Filled.RestartAlt">
+            Sí, resetear
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* ── FAB Guardar — siempre visible sin importar el scroll ───────────────── *@
+<div style="position:fixed; bottom:24px; right:24px; z-index:999;">
+    <MudFab Color="Color.Primary"
+            StartIcon="@Icons.Material.Filled.Save"
+            Label="Guardar"
+            OnClick="() => AbrirConfirmacion(TabActual)"
+            Disabled="_guardando || _cargando" />
+</div>
+
+@* ── Dialog de confirmación ───────────────────────────────────────────────── *@
+<MudDialog @bind-Visible="_showConfirm">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Save" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Confirmar guardado</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-3">
+            ¿Estás seguro que deseas guardar los resultados de
+            <strong>@GetNombreTab(_tabActual)</strong>?
+        </MudText>
+        <MudAlert Severity="Severity.Warning" Dense="true">
+            Esta acción <strong>recalculará los puntos</strong> de todas las planillas
+            afectadas por estos resultados.
+        </MudAlert>
+        @if (_errorGuardado is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">
+                @_errorGuardado
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CerrarConfirmacion" Disabled="_guardando">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="EjecutarGuardado" Disabled="_guardando"
+                   StartIcon="@Icons.Material.Filled.Save">
+            @if (_guardando)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Guardando...</span>
+            }
+            else
+            {
+                <span>Sí, guardar</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@* ── Snackbar de éxito ────────────────────────────────────────────────────── *@
+@if (_exitoGuardado)
+{
+    <MudAlert Severity="Severity.Success" Class="mt-4" Dense="true"
+              ShowCloseIcon="true" CloseIconClicked="() => _exitoGuardado = false">
+        ✓ Resultados guardados y puntos recalculados correctamente.
+    </MudAlert>
+}
+
+@code {
+    RenderFragment TabKnockout(List<Partido> partidos, TabResultado tab) =>
+        @<div>
+            @foreach (var p in partidos)
+            {
+                <KnockoutResultadoRow Pred="p"
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(p.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(p.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(p.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(p.Id, v)" />
+            }
+        </div>;
+
+    RenderFragment FilaScore(string label, string campoL, string campoV,
+        int? golesL, int? golesV, Action<int?> setL, Action<int?> setV) =>
+        @<MudItem xs="12" sm="6" Class="mb-3">
+            <MudText Typo="Typo.body2" Class="mb-1">@label</MudText>
+            <div class="d-flex align-center gap-2">
+                <MudNumericField T="int?" Value="golesL"
+                                 ValueChanged="v => setL(v)"
+                                 Min="0" Max="99"
+                                 Variant="Variant.Outlined" Dense="true" Style="width:70px;" />
+                <MudText>-</MudText>
+                <MudNumericField T="int?" Value="golesV"
+                                 ValueChanged="v => setV(v)"
+                                 Min="0" Max="99"
+                                 Variant="Variant.Outlined" Dense="true" Style="width:70px;" />
+            </div>
+        </MudItem>;
+}
+
+<style>
+    .grupo-fila {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 8px 0;
+    }
+    .partido-fecha {
+        grid-column: 1 / -1;
+        opacity: 0.6;
+        font-size: 0.7rem;
+    }
+    .grupo-fila__equipos {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+        gap: 4px;
+    }
+    .grupo-fila__equipos > div {
+        flex: 1;
+        min-width: 0;
+    }
+    .grupo-fila__botones {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    @@media (max-width: 480px) {
+        .grupo-fila { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+        .grupo-fila__equipos { flex-direction: column; align-items: flex-start; gap: 2px; }
+        .grupo-fila__equipos > div { width: 100%; }
+        .grupo-fila__botones { justify-content: flex-start; padding-top: 2px; }
+    }
+</style>

@@ -20,7 +20,7 @@ public class PrediccionFinal
     public int? CuartoLugarEquipoId { get; set; }       // 50 pts
     public Equipo? CuartoLugar { get; set; }
 
-    // ── Extras fase de grupos ────────────────────────────────────────────────
+    // ── Extras fase eliminatoria ─────────────────────────────────────────────
     public int? MasGoleadorEquipoId { get; set; }       // 100 pts
     public Equipo? MasGoleador { get; set; }
 
@@ -31,12 +31,28 @@ public class PrediccionFinal
     public Equipo? MenosGoleado { get; set; }
 
     // ── Resultados exactos a 90 minutos ─────────────────────────────────────
-    public int? GolesLocalGranFinal { get; set; }       // 100 pts si ambos aciertan
+    public int? GolesLocalGranFinal { get; set; }
     public int? GolesVisitanteGranFinal { get; set; }
 
-    public int? GolesLocalSemi1 { get; set; }           // 100 pts
+    public int? GolesLocalSemi1 { get; set; }
     public int? GolesVisitanteSemi1 { get; set; }
 
-    public int? GolesLocalSemi2 { get; set; }           // 100 pts
+    public int? GolesLocalSemi2 { get; set; }
     public int? GolesVisitanteSemi2 { get; set; }
+
+    // ── Puntos desglosados (calculados por PuntuacionService) ────────────────
+    // Separados para poder recalcular cada sección de forma independiente
+    // sin afectar los demás cuando el admin actualiza un campo específico.
+
+    /// <summary>Suma de pts de campeón + 2do + 3ro + 4to + 3 extras.</summary>
+    public int? PuntosPosicionesFinal { get; set; }
+
+    /// <summary>100 pts si el marcador exacto del partido #101 a 90min es correcto.</summary>
+    public int? PuntosMarcadorSemi1 { get; set; }
+
+    /// <summary>100 pts si el marcador exacto del partido #102 a 90min es correcto.</summary>
+    public int? PuntosMarcadorSemi2 { get; set; }
+
+    /// <summary>100 pts si el marcador exacto del partido #104 a 90min es correcto.</summary>
+    public int? PuntosMarcadorGranFinal { get; set; }
 }

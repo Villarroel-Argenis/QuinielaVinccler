@@ -3,10 +3,7 @@
 <div class="equipo-select-wrapper" style="min-width:@MinWidth; position:relative;">
 
     @* ── Trigger ─────────────────────────────────────────────────────────── *@
-    <MudPaper Elevation="0"
-              Class="@TriggerClass"
-              Style="@TriggerStyle"
-              @onclick="ToggleOpen">
+    <div class="@TriggerClass" style="@TriggerStyle" @onclick="ToggleOpen">
         <div class="d-flex align-center justify-space-between" style="width:100%;">
             <div class="d-flex align-center gap-2" style="overflow:hidden;">
                 @if (_equipoSeleccionado is not null)
@@ -28,18 +25,17 @@
             <div class="d-flex align-center" style="flex-shrink:0;">
                 @if (Clearable && _equipoSeleccionado is not null && !Disabled)
                 {
-                    <div @onclick="async () => await LimpiarAsync()"
-                         @onclick:stopPropagation="true">
-                        <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                       Size="Size.Small" />
-                    </div>
+                    <span @onclick="LimpiarAsync" @onclick:stopPropagation="true"
+                          style="display:flex; align-items:center; cursor:pointer; padding:4px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                    </span>
                 }
                 <MudIcon Icon="@(_open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                          Size="Size.Small"
                          Class="mud-text-secondary" />
             </div>
         </div>
-    </MudPaper>
+    </div>
 
     @* ── Popover: escapa el overflow:hidden de cualquier ancestro ─────────── *@
     <MudPopover Open="_open"
@@ -62,7 +58,7 @@
             else if (item.Equipo is not null)
             {
                 var eq = item.Equipo;
-                var esSeleccionado = Value == eq.Id;
+                var esSeleccionado = _valorInterno == eq.Id;
                 <div class="equipo-select-item d-flex align-center gap-2 px-3 py-2 @(esSeleccionado ? "equipo-select-item--selected" : "")"
                      style="cursor:pointer;"
                      @onclick="async () => await SeleccionarAsync(eq.Id)">

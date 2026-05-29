@@ -12,6 +12,7 @@ global using QuestPDF.Fluent;
 global using QuestPDF.Helpers;
 global using QuestPDF.Infrastructure;
 global using QuinielaVinccler.UI.Web.Components;
+global using QuinielaVinccler.UI.Web.Components.Shared;
 global using QuinielaVinccler.UI.Web.Data;
 global using QuinielaVinccler.UI.Web.Data.Models;
 global using QuinielaVinccler.UI.Web.Endpoints;
@@ -20,7 +21,6 @@ global using System.Collections.Concurrent;
 global using System.Diagnostics;
 global using System.Net.Mail;
 global using System.Security.Claims;
-
 
 
 

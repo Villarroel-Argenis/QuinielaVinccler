@@ -1,4 +1,4 @@
-﻿namespace QuinielaVinccler.UI.Web.Components;
+﻿namespace QuinielaVinccler.UI.Web.Components.Admin;
 
 public partial class LoteComponent
 {

@@ -82,6 +82,16 @@ public partial class PlanillaDetalle : ComponentBase
         _finalMatch = ko.FirstOrDefault(p => p.Partido.Fase == Fase.Final);
     }
 
+    private List<PrediccionKnockout> GetAllKo()
+    {
+        return _r32
+            .Concat(_r16)
+            .Concat(_cuartos)
+            .Concat(_semis)
+            .Concat(_tercero is null ? [] : [_tercero])
+            .Concat(_finalMatch is null ? [] : [_finalMatch])
+            .ToList();
+    }
     // ── Progreso ──────────────────────────────────────────────────────────────
     private int CalcularProgreso()
     {
@@ -190,65 +200,135 @@ public partial class PlanillaDetalle : ComponentBase
 
     // ── Candidatos por slot ───────────────────────────────────────────────────
     // Retorna los equipos disponibles para un slot dado
-    internal List<Equipo> GetCandidatosParaSlot(string slot, int? excluirId = null)
+    internal List<Equipo> GetCandidatosParaSlot(
+      string slot,
+      int? excluirId = null,
+      int? prediccionActualId = null)
     {
-        List<Equipo> candidatos;
+        var allKo = GetAllKo();
 
+        List<Equipo> candidatos = [];
+
+        // =====================================================
+        // SLOTS DE MEJORES TERCEROS
+        // =====================================================
         if (slot.StartsWith("3"))
         {
-            // Mejor tercero: equipos de los grupos indicados
-            var grupos = slot[1..].Select(c => c.ToString()).ToHashSet();
-            var todos = _equipos.Where(e => grupos.Contains(e.Grupo)).ToList();
-
-            var excluidos = _r32
-                .Where(pk => pk.EquipoLocalPredichoId.HasValue || pk.EquipoVisitantePredichoId.HasValue)
-                .Where(pk =>
-                {
-                    bool EnGrupo(string s) => s.Length == 2 && s[0] != '3' && grupos.Contains(s[1].ToString());
-                    return EnGrupo(pk.Partido.SlotLocal) || EnGrupo(pk.Partido.SlotVisitante);
-                })
-                .SelectMany(pk => new[] { pk.EquipoLocalPredichoId, pk.EquipoVisitantePredichoId })
-                .Where(id => id.HasValue).Select(id => id!.Value)
+            var gruposPermitidos = slot[1..]
+                .Select(c => c.ToString())
                 .ToHashSet();
 
-            candidatos = todos.Where(e => !excluidos.Contains(e.Id)).ToList();
+            // Grupos ya consumidos como mejor tercero
+            var gruposYaUsados = allKo
+                .Where(pk => pk.Id != prediccionActualId)
+                .SelectMany(pk => new[]
+                {
+                new
+                {
+                    Slot = pk.Partido.SlotLocal,
+                    Equipo = pk.EquipoLocalPredichado
+                },
+                new
+                {
+                    Slot = pk.Partido.SlotVisitante,
+                    Equipo = pk.EquipoVisitantePredichado
+                }
+                })
+                .Where(x =>
+                    x.Equipo is not null &&
+                    x.Slot.StartsWith("3"))
+                .Select(x => x.Equipo!.Grupo)
+                .ToHashSet();
+
+            gruposPermitidos.ExceptWith(gruposYaUsados);
+
+            candidatos = [.. _equipos.Where(e => gruposPermitidos.Contains(e.Grupo))];
         }
-        else if (slot.Length == 2 && (slot[0] == '1' || slot[0] == '2'))
+
+        // =====================================================
+        // SLOTS NORMALES DE GRUPO (1A, 2B...)
+        // =====================================================
+        else if (
+            slot.Length == 2 &&
+            (slot[0] == '1' || slot[0] == '2'))
         {
-            // Slot de grupo: equipo de ese grupo
             var grupo = slot[1].ToString();
-            candidatos = _equipos.Where(e => e.Grupo == grupo).ToList();
-        }
-        else if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
-        {
-            // Slot que viene del resultado de otro partido
-            var allKo = _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
-                            .Concat(_tercero is null ? [] : [_tercero])
-                            .Concat(_finalMatch is null ? [] : [_finalMatch]);
 
-            var src = allKo.FirstOrDefault(p => p.Partido.NumeroPartido == matchNum);
-            candidatos = [];
-            if (src?.EquipoLocalPredichado is not null) candidatos.Add(src.EquipoLocalPredichado);
-            if (src?.EquipoVisitantePredichado is not null) candidatos.Add(src.EquipoVisitantePredichado);
-        }
-        else if (slot.StartsWith("P") && int.TryParse(slot[1..], out var semiNum))
-        {
-            // Slot de perdedor de semifinal
-            var semi = _semis.FirstOrDefault(p => p.Partido.NumeroPartido == semiNum);
-            candidatos = [];
-            if (semi?.EquipoLocalPredichado is not null) candidatos.Add(semi.EquipoLocalPredichado);
-            if (semi?.EquipoVisitantePredichado is not null) candidatos.Add(semi.EquipoVisitantePredichado);
-        }
-        else
-        {
-            candidatos = [];
+            candidatos = [.. _equipos.Where(e => e.Grupo == grupo)];
         }
 
-        // Excluir el equipo ya seleccionado en el otro slot del mismo partido
+        // =====================================================
+        // GANADOR DE PARTIDO
+        // =====================================================
+        else if (
+            slot.StartsWith("G") &&
+            int.TryParse(slot[1..], out var matchNum))
+        {
+            var src = allKo
+                .FirstOrDefault(p =>
+                    p.Partido.NumeroPartido == matchNum);
+
+            if (src?.EquipoLocalPredichado is not null)
+                candidatos.Add(src.EquipoLocalPredichado);
+
+            if (src?.EquipoVisitantePredichado is not null)
+                candidatos.Add(src.EquipoVisitantePredichado);
+        }
+
+        // =====================================================
+        // PERDEDOR DE SEMIFINAL
+        // =====================================================
+        else if (
+            slot.StartsWith("P") &&
+            int.TryParse(slot[1..], out var semiNum))
+        {
+            var semi = _semis
+                .FirstOrDefault(p =>
+                    p.Partido.NumeroPartido == semiNum);
+
+            if (semi?.EquipoLocalPredichado is not null)
+                candidatos.Add(semi.EquipoLocalPredichado);
+
+            if (semi?.EquipoVisitantePredichado is not null)
+                candidatos.Add(semi.EquipoVisitantePredichado);
+        }
+
+        // =====================================================
+        // EXCLUIR EQUIPOS YA USADOS
+        // Solo aplica a slots de R32 (1X, 2X, 3XXXXX)
+        // Los slots GXX y PXX se llenan por cascada
+        // =====================================================
+        if (slot.Length == 2 || slot.StartsWith("3"))
+        {
+            var equiposYaUsados = allKo
+                .Where(pk => pk.Id != prediccionActualId)
+                .SelectMany(pk => new[]
+                {
+            pk.EquipoLocalPredichoId,
+            pk.EquipoVisitantePredichoId
+                })
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToHashSet();
+
+            candidatos = [.. candidatos.Where(e => !equiposYaUsados.Contains(e.Id))];
+        }
+        // =====================================================
+        // EXCLUIR EL OTRO SLOT DEL MISMO PARTIDO
+        // =====================================================
         if (excluirId.HasValue)
-            candidatos = candidatos.Where(e => e.Id != excluirId.Value).ToList();
+        {
+            candidatos = [.. candidatos.Where(e => e.Id != excluirId.Value)];
+        }
 
-        return candidatos.OrderBy(e => e.Nombre).ToList();
+        return [.. candidatos
+            .DistinctBy(e => e.Id)
+            .OrderBy(e => e.Nombre)];
+    }
+
+    internal bool EsSlotMejorTercero(string slot)
+    {
+        return slot.StartsWith("3");
     }
 
     // ── Reset total ───────────────────────────────────────────────────────────

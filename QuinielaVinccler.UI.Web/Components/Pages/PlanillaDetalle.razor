@@ -272,15 +272,44 @@ else
                                    Variant="Variant.Outlined"
                                    Placeholder="Seleccionar">
                             <MudSelectItem T="int?" Value="(int?)null">-- Seleccionar --</MudSelectItem>
-                            @foreach (var eq in GetCandidatosParaSlot(pred.Partido.SlotLocal, pred.EquipoVisitantePredichoId))
+                        @if (EsSlotMejorTercero(pred.Partido.SlotLocal))
+                        {
+                            @foreach (var grupo in GetCandidatosParaSlot(
+                                    pred.Partido.SlotLocal,
+                                    pred.EquipoVisitantePredichoId,
+                                    pred.Id)
+                                    .GroupBy(e => e.Grupo)
+                                    .OrderBy(g => g.Key))
+                            {
+                                
+
+                                @foreach (var eq in grupo)
+                                {
+                                    <MudSelectItem T="int?" Value="(int?)eq.Id">
+                                        <div class="d-flex align-center gap-1">
+                                            <img src="@eq.FlagUrl" style="height:14px;" />
+                                            @eq.Nombre
+                                        </div>
+                                    </MudSelectItem>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var eq in GetCandidatosParaSlot(
+                                    pred.Partido.SlotLocal,
+                                    pred.EquipoVisitantePredichoId,
+                                    pred.Id))
                             {
                                 <MudSelectItem T="int?" Value="(int?)eq.Id">
                                     <div class="d-flex align-center gap-1">
-                                        <img src="@eq.FlagUrl" style="height:14px;" /> @eq.Nombre
+                                        <img src="@eq.FlagUrl" style="height:14px;" />
+                                        @eq.Nombre
                                     </div>
                                 </MudSelectItem>
                             }
-                        </MudSelect>
+                        }
+                    </MudSelect>
                         @if (!_soloLectura && pred.EquipoLocalPredichoId.HasValue)
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Clear"
@@ -310,15 +339,45 @@ else
                                    Variant="Variant.Outlined"
                                    Placeholder="Seleccionar">
                             <MudSelectItem T="int?" Value="(int?)null">-- Seleccionar --</MudSelectItem>
-                            @foreach (var eq in GetCandidatosParaSlot(pred.Partido.SlotVisitante, pred.EquipoLocalPredichoId))
+                        @if (EsSlotMejorTercero(pred.Partido.SlotVisitante))
+                        {
+                            @foreach (var grupo in GetCandidatosParaSlot(
+                                    pred.Partido.SlotVisitante,
+                                    pred.EquipoLocalPredichoId,
+                                    pred.Id)
+                                    .GroupBy(e => e.Grupo)
+                                    .OrderBy(g => g.Key))
+                            {
+                                
+
+                                @foreach (var eq in grupo)
+                                {
+                                    <MudSelectItem T="int?" Value="(int?)eq.Id">
+                                        <div class="d-flex align-center gap-1">
+                                            <img src="@eq.FlagUrl" style="height:14px;" />
+                                            @eq.Nombre
+                                        </div>
+                                    </MudSelectItem>
+                                }
+                               
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var eq in GetCandidatosParaSlot(
+                                    pred.Partido.SlotVisitante,
+                                    pred.EquipoLocalPredichoId,
+                                    pred.Id))
                             {
                                 <MudSelectItem T="int?" Value="(int?)eq.Id">
                                     <div class="d-flex align-center gap-1">
-                                        <img src="@eq.FlagUrl" style="height:14px;" /> @eq.Nombre
+                                        <img src="@eq.FlagUrl" style="height:14px;" />
+                                        @eq.Nombre
                                     </div>
                                 </MudSelectItem>
                             }
-                        </MudSelect>
+                        }
+                    </MudSelect>
                         @if (!_soloLectura && pred.EquipoVisitantePredichoId.HasValue)
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Clear"

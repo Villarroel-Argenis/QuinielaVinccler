@@ -3,6 +3,16 @@
 
 <MudContainer Class="pa-4" MaxWidth="MaxWidth.Large">
 
+    <div class="d-flex justify-end mb-3">
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Outlined"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.RestartAlt"
+                   OnClick="AbrirResetPuntos">
+            Resetear todos los puntos
+        </MudButton>
+    </div>
+
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4"
               @bind-ActivePanelIndex="_tabIndex">
 
@@ -104,8 +114,12 @@
             @if (_tercero is not null)
             {
                 <KnockoutResultadoRow Pred="_tercero"
-                                      GanadorId="GetGanador(_tercero.Id)"
-                                      OnGanadorChanged="v => SetGanador(_tercero.Id, v)" />
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(_tercero.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(_tercero.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(_tercero.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(_tercero.Id, v)" />
             }
         </MudTabPanel>
 
@@ -116,8 +130,12 @@
                     Partido #@_finalPartido.NumeroPartido — Ganador de la final
                 </MudText>
                 <KnockoutResultadoRow Pred="_finalPartido"
-                                      GanadorId="GetGanador(_finalPartido.Id)"
-                                      OnGanadorChanged="v => SetGanador(_finalPartido.Id, v)" />
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(_finalPartido.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(_finalPartido.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(_finalPartido.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(_finalPartido.Id, v)" />
 
                 <MudDivider Class="my-4" />
 
@@ -233,6 +251,30 @@
     </MudTabs>
 </MudContainer>
 
+@* ── Dialog resetear puntos ─────────────────────────────────────────────── *@
+<MudDialog @bind-Visible="_showResetPuntos">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+            <MudText Typo="Typo.h6">Resetear todos los puntos</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Error" Dense="true">
+            Esta acción pondrá en <strong>0</strong> el puntaje de <strong>todas las planillas</strong>.
+            Úsala solo si borraste todos los resultados. No se puede deshacer.
+        </MudAlert>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showResetPuntos = false">Cancelar</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled"
+                   OnClick="EjecutarResetPuntos"
+                   StartIcon="@Icons.Material.Filled.RestartAlt">
+            Sí, resetear
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @* ── FAB Guardar — siempre visible sin importar el scroll ───────────────── *@
 <div style="position:fixed; bottom:24px; right:24px; z-index:999;">
     <MudFab Color="Color.Primary"
@@ -299,8 +341,12 @@
             @foreach (var p in partidos)
             {
                 <KnockoutResultadoRow Pred="p"
-                                      GanadorId="GetGanador(p.Id)"
-                                      OnGanadorChanged="v => SetGanador(p.Id, v)" />
+                                      EquiposById="_equiposById"
+                                      GetCandidatos="GetCandidatosKo"
+                                      EquipoLocalId="@GetKoLocal(p.Id)"
+                                      EquipoVisitanteId="@GetKoVisitante(p.Id)"
+                                      OnEquipoLocalChanged="v => SetKoLocal(p.Id, v)"
+                                      OnEquipoVisitanteChanged="v => SetKoVisitante(p.Id, v)" />
             }
         </div>;
 

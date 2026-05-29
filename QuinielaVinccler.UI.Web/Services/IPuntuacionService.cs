@@ -27,4 +27,9 @@ public interface IPuntuacionService
     /// cuando el admin actualiza ResultadoFinal.
     /// </summary>
     Task RecalcularResultadoFinalAsync();
+
+    /// <summary>
+    /// Resetea todos los puntos a 0 — usar cuando el admin borra todos los resultados.
+    /// </summary>
+    Task ResetearTodosPuntosAsync();
 }

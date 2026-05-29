@@ -25,25 +25,27 @@ namespace QuinielaVinccler.UI.Web.Services;
 public class PuntuacionService(AppDbContext db) : IPuntuacionService
 {
     // ── Tabla de puntos ───────────────────────────────────────────────────────
-    private const int PtsGrupo      = 60;
-    private const int PtsR32        = 70;  // por cada slot (local + visitante)
-    private const int PtsR16        = 70;
-    private const int PtsCuartos    = 80;
-    private const int PtsSemis      = 100;
-    private const int PtsTercero    = 100;
-    private const int PtsFinal      = 100;
-    private const int PtsCampeon    = 300;
-    private const int PtsSegundo    = 200;
-    private const int PtsTercerLug  = 100;
-    private const int PtsCuarto     = 50;
-    private const int PtsExtra      = 100;
-    private const int PtsMarcador   = 100;
+    private const int PtsGrupo = 60;
+    private const int PtsR32 = 70;  // por cada slot (local + visitante)
+    private const int PtsR16 = 70;
+    private const int PtsCuartos = 80;
+    private const int PtsSemis = 100;
+    private const int PtsTercero = 100;
+    private const int PtsFinal = 100;
+    private const int PtsCampeon = 300;
+    private const int PtsSegundo = 200;
+    private const int PtsTercerLug = 100;
+    private const int PtsCuarto = 50;
+    private const int PtsExtra = 100;
+    private const int PtsMarcador = 100;
 
     // ── Fase de grupos ────────────────────────────────────────────────────────
     public async Task RecalcularGrupoAsync(int partidoId)
     {
-        var partido = await db.Partidos.FindAsync(partidoId);
-        if (partido?.ResultadoGrupo is null) return;
+        var partido = await db.Partidos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == partidoId);
+        if (partido is null) return;
 
         var predicciones = await db.PrediccionesGrupo
             .Where(p => p.PartidoId == partidoId)
@@ -51,8 +53,10 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
 
         foreach (var pred in predicciones)
         {
-            pred.PuntosObtenidos = pred.ResultadoPredicho == partido.ResultadoGrupo
-                ? PtsGrupo : 0;
+            // Si no hay resultado real, resetear puntos a null
+            pred.PuntosObtenidos = partido.ResultadoGrupo is null
+                ? null
+                : pred.ResultadoPredicho == partido.ResultadoGrupo ? PtsGrupo : 0;
         }
 
         await db.SaveChangesAsync();
@@ -62,13 +66,26 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
     // ── Knockout (R16, Cuartos, Semis, 3°/4°, Final) ─────────────────────────
     public async Task RecalcularKnockoutAsync(int partidoId)
     {
-        var partido = await db.Partidos.FindAsync(partidoId);
+        var partido = await db.Partidos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == partidoId);
         if (partido is null) return;
 
-        // R16+ requieren ganador para calcular puntos
-        // R32 solo requiere que los equipos estén definidos
-        if (partido.Fase != Fase.RoundOf32 && partido.EquipoGanadorId is null) return;
-        if (partido.Fase == Fase.RoundOf32 && partido.EquipoLocalId is null && partido.EquipoVisitanteId is null) return;
+        // R16+ requieren al menos un equipo definido para calcular puntos
+        bool sinResultado = partido.Fase == Fase.RoundOf32
+            ? partido.EquipoLocalId is null && partido.EquipoVisitanteId is null
+            : partido.EquipoLocalId is null && partido.EquipoVisitanteId is null;
+
+        if (sinResultado)
+        {
+            var predsReset = await db.PrediccionesKnockout
+                .Where(p => p.PartidoId == partidoId)
+                .ToListAsync();
+            foreach (var pred in predsReset) pred.PuntosObtenidos = null;
+            await db.SaveChangesAsync();
+            await ActualizarTotalesAsync(predsReset.Select(p => p.PlanillaId).Distinct());
+            return;
+        }
 
         var pts = PuntosPorFase(partido.Fase);
 
@@ -96,11 +113,20 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
         }
         else
         {
-            // R16+: ganador
+            // R16+: igual que R32 — el usuario predijo local y visitante de cada partido.
+            // Gana pts por cada slot correcto.
             foreach (var pred in predicciones)
             {
-                pred.PuntosObtenidos = pred.EquipoGanadorId == partido.EquipoGanadorId
-                    ? pts : 0;
+                int ptsKo = 0;
+                if (pred.EquipoLocalPredichoId.HasValue &&
+                    pred.EquipoLocalPredichoId == partido.EquipoLocalId)
+                    ptsKo += pts;
+
+                if (pred.EquipoVisitantePredichoId.HasValue &&
+                    pred.EquipoVisitantePredichoId == partido.EquipoVisitanteId)
+                    ptsKo += pts;
+
+                pred.PuntosObtenidos = ptsKo;
             }
         }
 
@@ -127,21 +153,21 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
         {
             bool acierta = partido.NumeroPartido switch
             {
-                101 => pred.GolesLocalSemi1      == partido.GolesLocal &&
-                       pred.GolesVisitanteSemi1   == partido.GolesVisitante,
-                102 => pred.GolesLocalSemi2      == partido.GolesLocal &&
-                       pred.GolesVisitanteSemi2   == partido.GolesVisitante,
-                104 => pred.GolesLocalGranFinal  == partido.GolesLocal &&
+                101 => pred.GolesLocalSemi1 == partido.GolesLocal &&
+                       pred.GolesVisitanteSemi1 == partido.GolesVisitante,
+                102 => pred.GolesLocalSemi2 == partido.GolesLocal &&
+                       pred.GolesVisitanteSemi2 == partido.GolesVisitante,
+                104 => pred.GolesLocalGranFinal == partido.GolesLocal &&
                        pred.GolesVisitanteGranFinal == partido.GolesVisitante,
-                _   => false
+                _ => false
             };
 
             // Guardamos puntos en una columna auxiliar de PrediccionFinal
             // usando el campo PuntosMarcadorSemi1/2/Final
             switch (partido.NumeroPartido)
             {
-                case 101: pred.PuntosMarcadorSemi1    = acierta ? PtsMarcador : 0; break;
-                case 102: pred.PuntosMarcadorSemi2    = acierta ? PtsMarcador : 0; break;
+                case 101: pred.PuntosMarcadorSemi1 = acierta ? PtsMarcador : 0; break;
+                case 102: pred.PuntosMarcadorSemi2 = acierta ? PtsMarcador : 0; break;
                 case 104: pred.PuntosMarcadorGranFinal = acierta ? PtsMarcador : 0; break;
             }
 
@@ -159,18 +185,18 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
         if (real is null) return;
 
         var predicciones = await db.PrediccionesFinal.ToListAsync();
-        var planillaIds  = new List<int>();
+        var planillaIds = new List<int>();
 
         foreach (var pred in predicciones)
         {
             pred.PuntosPosicionesFinal =
-                (pred.CampeonEquipoId      == real.CampeonEquipoId      && real.CampeonEquipoId      is not null ? PtsCampeon   : 0) +
-                (pred.SegundoLugarEquipoId == real.SegundoLugarEquipoId && real.SegundoLugarEquipoId is not null ? PtsSegundo   : 0) +
-                (pred.TercerLugarEquipoId  == real.TercerLugarEquipoId  && real.TercerLugarEquipoId  is not null ? PtsTercerLug : 0) +
-                (pred.CuartoLugarEquipoId  == real.CuartoLugarEquipoId  && real.CuartoLugarEquipoId  is not null ? PtsCuarto    : 0) +
-                (pred.MasGoleadorEquipoId  == real.MasGoleadorEquipoId  && real.MasGoleadorEquipoId  is not null ? PtsExtra     : 0) +
-                (pred.MasGoleadoEquipoId   == real.MasGoleadoEquipoId   && real.MasGoleadoEquipoId   is not null ? PtsExtra     : 0) +
-                (pred.MenosGoleadoEquipoId == real.MenosGoleadoEquipoId && real.MenosGoleadoEquipoId is not null ? PtsExtra     : 0);
+                (pred.CampeonEquipoId == real.CampeonEquipoId && real.CampeonEquipoId is not null ? PtsCampeon : 0) +
+                (pred.SegundoLugarEquipoId == real.SegundoLugarEquipoId && real.SegundoLugarEquipoId is not null ? PtsSegundo : 0) +
+                (pred.TercerLugarEquipoId == real.TercerLugarEquipoId && real.TercerLugarEquipoId is not null ? PtsTercerLug : 0) +
+                (pred.CuartoLugarEquipoId == real.CuartoLugarEquipoId && real.CuartoLugarEquipoId is not null ? PtsCuarto : 0) +
+                (pred.MasGoleadorEquipoId == real.MasGoleadorEquipoId && real.MasGoleadorEquipoId is not null ? PtsExtra : 0) +
+                (pred.MasGoleadoEquipoId == real.MasGoleadoEquipoId && real.MasGoleadoEquipoId is not null ? PtsExtra : 0) +
+                (pred.MenosGoleadoEquipoId == real.MenosGoleadoEquipoId && real.MenosGoleadoEquipoId is not null ? PtsExtra : 0);
 
             planillaIds.Add(pred.PlanillaId);
         }
@@ -180,6 +206,30 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Resetea todos los puntos a null/0.
+    /// Usar cuando el admin borra todos los resultados.
+    /// </summary>
+    public async Task ResetearTodosPuntosAsync()
+    {
+        await db.PrediccionesGrupo
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.PuntosObtenidos, (int?)null));
+
+        await db.PrediccionesKnockout
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.PuntosObtenidos, (int?)null));
+
+        await db.PrediccionesFinal
+            .ExecuteUpdateAsync(p => p
+                .SetProperty(x => x.PuntosPosicionesFinal, (int?)null)
+                .SetProperty(x => x.PuntosMarcadorSemi1, (int?)null)
+                .SetProperty(x => x.PuntosMarcadorSemi2, (int?)null)
+                .SetProperty(x => x.PuntosMarcadorGranFinal, (int?)null));
+
+        await db.Planillas
+            .Where(p => p.UserId != null)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.PuntajeTotal, 0));
+    }
 
     /// <summary>
     /// Recalcula PuntajeTotal de cada planilla afectada sumando todos sus puntos.
@@ -201,9 +251,9 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
                 .FirstOrDefaultAsync(p => p.PlanillaId == planillaId);
 
             var ptsFinal = pFinal is null ? 0 :
-                (pFinal.PuntosPosicionesFinal  ?? 0) +
-                (pFinal.PuntosMarcadorSemi1    ?? 0) +
-                (pFinal.PuntosMarcadorSemi2    ?? 0) +
+                (pFinal.PuntosPosicionesFinal ?? 0) +
+                (pFinal.PuntosMarcadorSemi1 ?? 0) +
+                (pFinal.PuntosMarcadorSemi2 ?? 0) +
                 (pFinal.PuntosMarcadorGranFinal ?? 0);
 
             var planilla = await db.Planillas.FindAsync(planillaId);
@@ -216,11 +266,11 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
 
     private static int PuntosPorFase(Fase fase) => fase switch
     {
-        Fase.RoundOf16     => PtsR16,
-        Fase.Cuartos       => PtsCuartos,
-        Fase.Semis         => PtsSemis,
-        Fase.TercerPuesto  => PtsTercero,
-        Fase.Final         => PtsFinal,
-        _                  => 0
+        Fase.RoundOf16 => PtsR16,
+        Fase.Cuartos => PtsCuartos,
+        Fase.Semis => PtsSemis,
+        Fase.TercerPuesto => PtsTercero,
+        Fase.Final => PtsFinal,
+        _ => 0
     };
 }

@@ -1,13 +1,26 @@
 namespace QuinielaVinccler.UI.Web.Components.Admin;
 
+using QuinielaVinccler.UI.Web.Components.Shared;
+
 public partial class KnockoutResultadoRow : ComponentBase
 {
-    /// <summary>El partido con equipos ya resueltos (EquipoLocal y EquipoVisitante cargados).</summary>
     [Parameter, EditorRequired] public Partido Pred { get; set; } = null!;
+    [Parameter, EditorRequired] public Dictionary<int, Equipo> EquiposById { get; set; } = [];
+    [Parameter, EditorRequired] public Func<string, int?, int?, List<Equipo>> GetCandidatos { get; set; } = null!;
 
-    /// <summary>Id del equipo ganador actualmente seleccionado (puede ser null).</summary>
-    [Parameter, EditorRequired] public int? GanadorId { get; set; }
+    [Parameter] public int? EquipoLocalId { get; set; }
+    [Parameter] public int? EquipoVisitanteId { get; set; }
 
-    /// <summary>Callback cuando el admin selecciona o limpia el ganador.</summary>
-    [Parameter, EditorRequired] public EventCallback<int?> OnGanadorChanged { get; set; }
+    [Parameter] public EventCallback<int?> OnEquipoLocalChanged { get; set; }
+    [Parameter] public EventCallback<int?> OnEquipoVisitanteChanged { get; set; }
+
+    public IReadOnlyList<EquipoSelectItem> CandidatosLocal =>
+        GetCandidatos(Pred.SlotLocal, EquipoVisitanteId, Pred.NumeroPartido)
+            .Select(e => new EquipoSelectItem(EsHeader: false, Equipo: e))
+            .ToList();
+
+    public IReadOnlyList<EquipoSelectItem> CandidatosVisitante =>
+        GetCandidatos(Pred.SlotVisitante, EquipoLocalId, Pred.NumeroPartido)
+            .Select(e => new EquipoSelectItem(EsHeader: false, Equipo: e))
+            .ToList();
 }

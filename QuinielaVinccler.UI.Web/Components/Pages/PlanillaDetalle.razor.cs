@@ -84,16 +84,19 @@ public partial class PlanillaDetalle : ComponentBase
         _finalMatch = ko.FirstOrDefault(p => p.Partido.Fase == Fase.Final);
     }
 
+    private List<PrediccionKnockout> GetAllKo() =>
+        _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
+            .Concat(_tercero    is null ? [] : [_tercero])
+            .Concat(_finalMatch is null ? [] : [_finalMatch])
+            .ToList();
+
     // ── Progreso ──────────────────────────────────────────────────────────────
     private int CalcularProgreso()
     {
         int n = 0;
         n += _planilla!.PrediccionesGrupo.Count(p => p.ResultadoPredicho.HasValue);
 
-        var todosKo = _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
-                          .Concat(_tercero    is null ? [] : [_tercero])
-                          .Concat(_finalMatch is null ? [] : [_finalMatch]);
-
+        var todosKo = GetAllKo();
         n += todosKo.Count(p => p.EquipoLocalPredichoId.HasValue);
         n += todosKo.Count(p => p.EquipoVisitantePredichoId.HasValue);
 
@@ -211,26 +214,91 @@ public partial class PlanillaDetalle : ComponentBase
         _ => ""
     };
 
-    // ── Candidatos por slot — delega a SlotHelper ─────────────────────────────
-    internal List<Equipo> GetCandidatosParaSlot(
-        string slot,
-        int? excluirId = null,
-        int? prediccionActualId = null)
+    // ── Candidatos por slot — lógica original ─────────────────────────────────
+    internal List<Equipo> GetCandidatosParaSlot(string slot, int? excluirId = null, int? prediccionActualId = null)
     {
-        var r32Estados = _r32.Select(SlotHelper.FromPrediccion).ToList();
-        var semiEstados = _semis.Select(SlotHelper.FromPrediccion).ToList();
-        var terceroEstado  = _tercero    is null ? null : SlotHelper.FromPrediccion(_tercero);
-        var finalEstado    = _finalMatch is null ? null : SlotHelper.FromPrediccion(_finalMatch);
+        var allKo = GetAllKo();
+        List<Equipo> candidatos = [];
 
-        return SlotHelper.GetCandidatos(
-            slot:            slot,
-            equipos:         _equipos,
-            todosR32:        r32Estados,
-            semis:           semiEstados,
-            tercero:         terceroEstado,
-            finalMatch:      finalEstado,
-            excluirId:       excluirId,
-            partidoActualId: prediccionActualId);
+        // ── MEJOR TERCERO (3XXXXX) ────────────────────────────────────────────
+        if (slot.StartsWith("3"))
+        {
+            var gruposPermitidos = slot[1..].Select(c => c.ToString()).ToHashSet();
+
+            var gruposYaUsados = allKo
+                .Where(pk => pk.Id != prediccionActualId)
+                .SelectMany(pk => new[]
+                {
+                    new { Slot = pk.Partido.SlotLocal,     Equipo = pk.EquipoLocalPredichado },
+                    new { Slot = pk.Partido.SlotVisitante, Equipo = pk.EquipoVisitantePredichado }
+                })
+                .Where(x => x.Equipo is not null && x.Slot.StartsWith("3"))
+                .Select(x => x.Equipo!.Grupo)
+                .ToHashSet();
+
+            gruposPermitidos.ExceptWith(gruposYaUsados);
+            candidatos = [.. _equipos.Where(e => gruposPermitidos.Contains(e.Grupo))];
+        }
+
+        // ── SLOT NORMAL DE GRUPO (1A, 2B...) ─────────────────────────────────
+        else if (slot.Length == 2 && (slot[0] == '1' || slot[0] == '2'))
+        {
+            var grupo = slot[1].ToString();
+            candidatos = [.. _equipos.Where(e => e.Grupo == grupo)];
+        }
+
+        // ── GANADOR DE PARTIDO (G73, G101...) ────────────────────────────────
+        else if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
+        {
+            var src = allKo.FirstOrDefault(p => p.Partido.NumeroPartido == matchNum);
+            if (src?.EquipoLocalPredichado is not null)    candidatos.Add(src.EquipoLocalPredichado);
+            if (src?.EquipoVisitantePredichado is not null) candidatos.Add(src.EquipoVisitantePredichado);
+
+            if (_tercero is not null)
+            {
+                int? perdedorId = null;
+                if (_tercero.Partido.SlotLocal    == $"P{matchNum}") perdedorId = _tercero.EquipoLocalPredichoId;
+                else if (_tercero.Partido.SlotVisitante == $"P{matchNum}") perdedorId = _tercero.EquipoVisitantePredichoId;
+                if (perdedorId.HasValue)
+                    candidatos = [.. candidatos.Where(e => e.Id != perdedorId.Value)];
+            }
+        }
+
+        // ── PERDEDOR DE SEMIFINAL (P101, P102) ───────────────────────────────
+        else if (slot.StartsWith("P") && int.TryParse(slot[1..], out var semiNum))
+        {
+            var semi = _semis.FirstOrDefault(p => p.Partido.NumeroPartido == semiNum);
+            if (semi?.EquipoLocalPredichado is not null)    candidatos.Add(semi.EquipoLocalPredichado);
+            if (semi?.EquipoVisitantePredichado is not null) candidatos.Add(semi.EquipoVisitantePredichado);
+
+            if (_finalMatch is not null)
+            {
+                int? ganadorId = null;
+                if (_finalMatch.Partido.SlotLocal    == $"G{semiNum}") ganadorId = _finalMatch.EquipoLocalPredichoId;
+                else if (_finalMatch.Partido.SlotVisitante == $"G{semiNum}") ganadorId = _finalMatch.EquipoVisitantePredichoId;
+                if (ganadorId.HasValue)
+                    candidatos = [.. candidatos.Where(e => e.Id != ganadorId.Value)];
+            }
+        }
+
+        // ── EXCLUIR EQUIPOS YA USADOS EN R32 ─────────────────────────────────
+        if (slot.Length == 2 || slot.StartsWith("3"))
+        {
+            var equiposYaUsados = allKo
+                .Where(pk => pk.Id != prediccionActualId)
+                .SelectMany(pk => new[] { pk.EquipoLocalPredichoId, pk.EquipoVisitantePredichoId })
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .ToHashSet();
+
+            candidatos = [.. candidatos.Where(e => !equiposYaUsados.Contains(e.Id))];
+        }
+
+        // ── EXCLUIR EL OTRO SLOT DEL MISMO PARTIDO ───────────────────────────
+        if (excluirId.HasValue)
+            candidatos = [.. candidatos.Where(e => e.Id != excluirId.Value)];
+
+        return [.. candidatos.DistinctBy(e => e.Id).OrderBy(e => e.Nombre)];
     }
 
     // ── Reset total ───────────────────────────────────────────────────────────

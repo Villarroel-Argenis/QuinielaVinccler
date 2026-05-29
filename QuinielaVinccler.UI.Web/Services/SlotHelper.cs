@@ -20,20 +20,31 @@ public sealed record PartidoSlotEstado(
 /// </summary>
 public static class SlotHelper
 {
+    /// <summary>
+    /// Devuelve los equipos candidatos para un slot dado.
+    /// </summary>
+    /// <param name="slot">Slot del partido ("2A", "3ABCDF", "G73", "P101"...)</param>
+    /// <param name="equipos">Lista completa de equipos del torneo.</param>
+    /// <param name="todosKo">TODOS los partidos KO (R32, R16, Cuartos, Semis, Tercero, Final).</param>
+    /// <param name="semis">Solo los partidos de semifinales — para resolver slots P{n}.</param>
+    /// <param name="tercero">Partido de 3° y 4° puesto.</param>
+    /// <param name="finalMatch">Partido de la final.</param>
+    /// <param name="excluirId">Id del equipo del otro slot del mismo partido.</param>
+    /// <param name="partidoActualId">Id del partido actual — excluido del filtro de "ya usados" en R32.</param>
     public static List<Equipo> GetCandidatos(
         string slot,
         List<Equipo> equipos,
-        List<PartidoSlotEstado> todosR32,
+        List<PartidoSlotEstado> todosKo,
         List<PartidoSlotEstado> semis,
         PartidoSlotEstado? tercero,
         PartidoSlotEstado? finalMatch,
         int? excluirId = null,
         int? partidoActualId = null)
     {
-        var allKo = new List<PartidoSlotEstado>(todosR32);
-        if (tercero    is not null) allKo.Add(tercero);
-        if (finalMatch is not null) allKo.Add(finalMatch);
-        allKo.AddRange(semis);
+        // R32 separado para la lógica de exclusión de slots ya usados
+        var soloR32 = todosKo.Where(p =>
+            p.SlotLocal.Length == 2 || p.SlotLocal.StartsWith("3") ||
+            p.SlotVisitante.Length == 2 || p.SlotVisitante.StartsWith("3")).ToList();
 
         List<Equipo> candidatos = [];
 
@@ -42,7 +53,7 @@ public static class SlotHelper
         {
             var gruposPermitidos = slot[1..].Select(c => c.ToString()).ToHashSet();
 
-            var gruposYaUsados = todosR32
+            var gruposYaUsados = soloR32
                 .Where(pk => pk.Id != partidoActualId)
                 .SelectMany(pk => new[]
                 {
@@ -64,15 +75,16 @@ public static class SlotHelper
             candidatos = [.. equipos.Where(e => e.Grupo == grupo)];
         }
 
-        // ── GANADOR DE PARTIDO (G73, G101...) ────────────────────────────────
-        // matchNum es el NumeroPartido del partido fuente
+        // ── GANADOR DE PARTIDO (G73, G89, G97, G101...) ───────────────────────
+        // Busca en TODOS los partidos KO por NumeroPartido — cubre toda la cascada:
+        // R32 → R16 → Cuartos → Semis → Final
         else if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
         {
-            var src = allKo.FirstOrDefault(p => p.NumeroPartido == matchNum);
+            var src = todosKo.FirstOrDefault(p => p.NumeroPartido == matchNum);
             if (src?.EquipoLocal is not null)    candidatos.Add(src.EquipoLocal);
             if (src?.EquipoVisitante is not null) candidatos.Add(src.EquipoVisitante);
 
-            // Excluir perdedor ya seleccionado en 3°/4° puesto
+            // Excluir el perdedor ya seleccionado en 3°/4° puesto
             if (tercero is not null)
             {
                 int? perdedorId = null;
@@ -84,14 +96,13 @@ public static class SlotHelper
         }
 
         // ── PERDEDOR DE SEMIFINAL (P101, P102) ───────────────────────────────
-        // semiNum es el NumeroPartido de la semi
         else if (slot.StartsWith("P") && int.TryParse(slot[1..], out var semiNum))
         {
             var semi = semis.FirstOrDefault(p => p.NumeroPartido == semiNum);
             if (semi?.EquipoLocal is not null)    candidatos.Add(semi.EquipoLocal);
             if (semi?.EquipoVisitante is not null) candidatos.Add(semi.EquipoVisitante);
 
-            // Excluir ganador ya seleccionado en la final
+            // Excluir el ganador ya seleccionado en la final
             if (finalMatch is not null)
             {
                 int? ganadorId = null;
@@ -102,10 +113,10 @@ public static class SlotHelper
             }
         }
 
-        // ── EXCLUIR EQUIPOS YA USADOS EN R32 (slots 1X, 2X, 3XXXXX) ─────────
+        // ── EXCLUIR EQUIPOS YA USADOS — solo aplica a R32 (1X, 2X, 3XXXXX) ──
         if (slot.Length == 2 || slot.StartsWith("3"))
         {
-            var equiposYaUsados = todosR32
+            var equiposYaUsados = soloR32
                 .Where(pk => pk.Id != partidoActualId)
                 .SelectMany(pk => new[] { pk.EquipoLocalId, pk.EquipoVisitanteId })
                 .Where(id => id.HasValue)
@@ -123,23 +134,31 @@ public static class SlotHelper
     }
 
     /// <summary>
-    /// Construye un PartidoSlotEstado desde una PrediccionKnockout (contexto usuario).
-    /// Id = PrediccionKnockout.Id — para el filtro de "partido actual" en exclusiones.
-    /// NumeroPartido = Partido.NumeroPartido — para búsqueda por slots G{n} y P{n}.
+    /// Construye desde PrediccionKnockout (contexto usuario).
+    /// Para slots G{n}/P{n} usa el equipo PREDICHO (EquipoLocalPredichado/EquipoVisitantePredichado).
+    /// Para slots G{n} de R16+ usa el ganador predicho (EquipoGanador).
     /// </summary>
-    public static PartidoSlotEstado FromPrediccion(PrediccionKnockout pk) => new(
-        Id:                pk.Id,
-        NumeroPartido:     pk.Partido.NumeroPartido,
-        SlotLocal:         pk.Partido.SlotLocal,
-        SlotVisitante:     pk.Partido.SlotVisitante,
-        EquipoLocalId:     pk.EquipoLocalPredichoId,
-        EquipoVisitanteId: pk.EquipoVisitantePredichoId,
-        EquipoLocal:       pk.EquipoLocalPredichado,
-        EquipoVisitante:   pk.EquipoVisitantePredichado);
+    public static PartidoSlotEstado FromPrediccion(PrediccionKnockout pk)
+    {
+        // R16+: el equipo "local" y "visitante" en cascada son los ganadores predichos
+        // que el usuario seleccionó en la fase anterior — guardados en EquipoGanador
+        // Para R32 usamos EquipoLocalPredichado/EquipoVisitantePredichado
+        var esR32 = pk.Partido.SlotLocal.Length == 2 || pk.Partido.SlotLocal.StartsWith("3") ||
+                    pk.Partido.SlotVisitante.Length == 2 || pk.Partido.SlotVisitante.StartsWith("3");
+
+        return new(
+            Id:               pk.Id,
+            NumeroPartido:    pk.Partido.NumeroPartido,
+            SlotLocal:        pk.Partido.SlotLocal,
+            SlotVisitante:    pk.Partido.SlotVisitante,
+            EquipoLocalId:    esR32 ? pk.EquipoLocalPredichoId  : pk.EquipoGanadorId,
+            EquipoVisitanteId: esR32 ? pk.EquipoVisitantePredichoId : null,
+            EquipoLocal:      esR32 ? pk.EquipoLocalPredichado  : pk.EquipoGanador,
+            EquipoVisitante:  esR32 ? pk.EquipoVisitantePredichado : null);
+    }
 
     /// <summary>
-    /// Construye un PartidoSlotEstado desde un Partido real (contexto admin).
-    /// Id = NumeroPartido — consistente para el filtro de "partido actual".
+    /// Construye desde Partido real (contexto admin).
     /// </summary>
     public static PartidoSlotEstado FromPartido(Partido p) => new(
         Id:                p.NumeroPartido,

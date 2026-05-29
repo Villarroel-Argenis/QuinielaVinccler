@@ -34,10 +34,13 @@
                     <MudPaper Elevation="1" Class="mb-3 rounded">
                         @foreach (var partido in partidos)
                         {
-                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary partido-fecha">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 pa-3">
+                                Partido #@partido.NumeroPartido
+                                <span style="opacity:0.6; margin-left:8px;">
                                     @partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
-                                </MudText>
+                                </span>
+                            </MudText>
+                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
                                 <div class="grupo-fila__equipos">
                                     <div class="d-flex align-center gap-1" style="min-width:0;">
                                         <img src="@partido.EquipoLocal!.FlagUrl" style="height:16px; flex-shrink:0;" />

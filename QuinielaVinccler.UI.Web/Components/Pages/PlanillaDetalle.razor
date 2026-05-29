@@ -72,12 +72,13 @@ else
                     <MudPaper Elevation="1" Class="mb-3 rounded">
                         @foreach (var pred in preds)
                         {
-                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
-
-                                @* ── Fecha ── *@
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary partido-fecha">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 pa-3">
+                                Partido #@pred.Partido.NumeroPartido
+                                <span style="opacity:0.6; margin-left:8px;">
                                     @pred.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
-                                </MudText>
+                                </span>
+                            </MudText>
+                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
 
                                 @* ── Equipos ── *@
                                 <div class="grupo-fila__equipos">

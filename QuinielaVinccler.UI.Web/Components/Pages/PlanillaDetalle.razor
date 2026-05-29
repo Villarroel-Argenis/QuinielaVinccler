@@ -72,12 +72,13 @@ else
                     <MudPaper Elevation="1" Class="mb-3 rounded">
                         @foreach (var pred in preds)
                         {
-                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
-
-                                @* ── Fecha ── *@
-                                <MudText Typo="Typo.caption" Class="mud-text-secondary partido-fecha">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 pa-3">
+                                Partido #@pred.Partido.NumeroPartido
+                                <span style="opacity:0.6; margin-left:8px;">
                                     @pred.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
-                                </MudText>
+                                </span>
+                            </MudText>
+                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
 
                                 @* ── Equipos ── *@
                                 <div class="grupo-fila__equipos">
@@ -253,13 +254,13 @@ else
 
                         @{
                             // Variables locales para evitar comillas anidadas en atributos
-                            var campeonKey   = "f-campeon";
-                            var segundoKey   = "f-segundo";
-                            var terceroKey   = "f-tercero";
-                            var cuartoKey    = "f-cuarto";
-                            var masGolKey    = "f-masGoleador";
-                            var masGoldKey   = "f-masGoleado";
-                            var menosGolKey  = "f-menosGoleado";
+                            var campeonKey = "f-campeon";
+                            var segundoKey = "f-segundo";
+                            var terceroKey = "f-tercero";
+                            var cuartoKey = "f-cuarto";
+                            var masGolKey = "f-masGoleador";
+                            var masGoldKey = "f-masGoleado";
+                            var menosGolKey = "f-menosGoleado";
                         }
 
                         <FinalEquipoRow Label="Campeón (300 pts)"
@@ -298,11 +299,11 @@ else
 
                         <MudItem xs="12">
                             <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mb-3">
-                                Extras fase de grupos (100 pts c/u)
+                                Extras fase eliminatoria (100 pts c/u)
                             </MudText>
                         </MudItem>
 
-                        <FinalEquipoRow Label="Equipo más goleador"
+                        <FinalEquipoRow Label="Equipo más goleador (Fase eliminatoria)"
                                         ValorActual="_pFinal.MasGoleadorEquipoId"
                                         Equipos="_equipos"
                                         EquiposById="_equiposById"
@@ -310,7 +311,7 @@ else
                                         MostrarCheckmark="@TieneCheckmark(masGolKey)"
                                         OnValorChanged="async v => await CambiarFinalEquipo(masGolKey, v, () => _pFinal.MasGoleadorEquipoId, x => _pFinal.MasGoleadorEquipoId = x)" />
 
-                        <FinalEquipoRow Label="Equipo más goleado"
+                        <FinalEquipoRow Label="Equipo más goleado (Fase eliminatoria)"
                                         ValorActual="_pFinal.MasGoleadoEquipoId"
                                         Equipos="_equipos"
                                         EquiposById="_equiposById"
@@ -318,7 +319,7 @@ else
                                         MostrarCheckmark="@TieneCheckmark(masGoldKey)"
                                         OnValorChanged="async v => await CambiarFinalEquipo(masGoldKey, v, () => _pFinal.MasGoleadoEquipoId, x => _pFinal.MasGoleadoEquipoId = x)" />
 
-                        <FinalEquipoRow Label="Equipo menos goleado"
+                        <FinalEquipoRow Label="Equipo menos goleado (Fase eliminatoria)"
                                         ValorActual="_pFinal.MenosGoleadoEquipoId"
                                         Equipos="_equipos"
                                         EquiposById="_equiposById"
@@ -334,15 +335,15 @@ else
                             </MudText>
                         </MudItem>
 
-                        @FilaScore("Semifinal 1 (Partido #101)", "sf1L", "sf1V",
+                        @FilaScore("Resultados Semi Final 1 · a los 90 min (Partido #101)", "sf1L", "sf1V",
                             _pFinal.GolesLocalSemi1, _pFinal.GolesVisitanteSemi1,
                             v => { _pFinal.GolesLocalSemi1 = v; }, v => { _pFinal.GolesVisitanteSemi1 = v; })
 
-                        @FilaScore("Semifinal 2 (Partido #102)", "sf2L", "sf2V",
+                        @FilaScore("Resultados Semi Final 2 · a los 90 min (Partido #102)", "sf2L", "sf2V",
                             _pFinal.GolesLocalSemi2, _pFinal.GolesVisitanteSemi2,
                             v => { _pFinal.GolesLocalSemi2 = v; }, v => { _pFinal.GolesVisitanteSemi2 = v; })
 
-                        @FilaScore("Gran Final (Partido #104)", "finL", "finV",
+                        @FilaScore("Resultados Gran Final · a los 90 min (Partido #104)", "finL", "finV",
                             _pFinal.GolesLocalGranFinal, _pFinal.GolesVisitanteGranFinal,
                             v => { _pFinal.GolesLocalGranFinal = v; }, v => { _pFinal.GolesVisitanteGranFinal = v; })
                     </MudGrid>
@@ -442,10 +443,10 @@ else
         gap: 4px;
     }
 
-    .grupo-fila__equipos > div {
-        flex: 1;
-        min-width: 0;
-    }
+        .grupo-fila__equipos > div {
+            flex: 1;
+            min-width: 0;
+        }
 
     .grupo-fila__botones {
         display: flex;
@@ -469,9 +470,9 @@ else
             gap: 2px;
         }
 
-        .grupo-fila__equipos > div {
-            width: 100%;
-        }
+            .grupo-fila__equipos > div {
+                width: 100%;
+            }
 
         .grupo-fila__botones {
             justify-content: flex-start;

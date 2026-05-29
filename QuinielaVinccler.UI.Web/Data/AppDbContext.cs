@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PrediccionGrupo> PrediccionesGrupo { get; set; } = null!;
     public DbSet<PrediccionKnockout> PrediccionesKnockout { get; set; } = null!;
     public DbSet<PrediccionFinal> PrediccionesFinal { get; set; } = null!;
+    public DbSet<ResultadoFinal> ResultadoFinal { get; set; } = null!;
     public DbSet<Configuracion> Configuraciones { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -86,13 +87,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(p => p.Partido).WithMany()
                   .HasForeignKey(p => p.PartidoId).OnDelete(DeleteBehavior.Restrict);
 
-            // R32: slots predichos
             entity.HasOne(p => p.EquipoLocalPredichado).WithMany()
                   .HasForeignKey(p => p.EquipoLocalPredichoId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(p => p.EquipoVisitantePredichado).WithMany()
                   .HasForeignKey(p => p.EquipoVisitantePredichoId).OnDelete(DeleteBehavior.SetNull);
-
-            // R16+: ganador predicho
             entity.HasOne(p => p.EquipoGanador).WithMany()
                   .HasForeignKey(p => p.EquipoGanadorId).OnDelete(DeleteBehavior.SetNull);
         });
@@ -118,6 +116,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                   .HasForeignKey(p => p.MasGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(p => p.MenosGoleado).WithMany()
                   .HasForeignKey(p => p.MenosGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ResultadoFinal>(entity =>
+        {
+            entity.HasOne(r => r.Campeon).WithMany()
+                  .HasForeignKey(r => r.CampeonEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.SegundoLugar).WithMany()
+                  .HasForeignKey(r => r.SegundoLugarEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.TercerLugar).WithMany()
+                  .HasForeignKey(r => r.TercerLugarEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.CuartoLugar).WithMany()
+                  .HasForeignKey(r => r.CuartoLugarEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.MasGoleador).WithMany()
+                  .HasForeignKey(r => r.MasGoleadorEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.MasGoleado).WithMany()
+                  .HasForeignKey(r => r.MasGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(r => r.MenosGoleado).WithMany()
+                  .HasForeignKey(r => r.MenosGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Configuracion>(entity =>

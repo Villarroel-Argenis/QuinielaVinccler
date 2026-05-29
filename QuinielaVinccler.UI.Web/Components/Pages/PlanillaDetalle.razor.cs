@@ -56,7 +56,7 @@ public partial class PlanillaDetalle : ComponentBase
             return;
         }
 
-        _equipos    = await PredSvc.GetEquiposAsync();
+        _equipos     = await PredSvc.GetEquiposAsync();
         _equiposById = _equipos.ToDictionary(e => e.Id);
 
         _soloLectura = _planilla.Estado == EstadoPlanilla.Cerrada
@@ -102,19 +102,19 @@ public partial class PlanillaDetalle : ComponentBase
 
         if (_pFinal is not null)
         {
-            if (_pFinal.CampeonEquipoId.HasValue)        n++;
-            if (_pFinal.SegundoLugarEquipoId.HasValue)   n++;
-            if (_pFinal.TercerLugarEquipoId.HasValue)    n++;
-            if (_pFinal.CuartoLugarEquipoId.HasValue)    n++;
-            if (_pFinal.MasGoleadorEquipoId.HasValue)    n++;
-            if (_pFinal.MasGoleadoEquipoId.HasValue)     n++;
-            if (_pFinal.MenosGoleadoEquipoId.HasValue)   n++;
-            if (_pFinal.GolesLocalGranFinal.HasValue)    n++;
+            if (_pFinal.CampeonEquipoId.HasValue)         n++;
+            if (_pFinal.SegundoLugarEquipoId.HasValue)    n++;
+            if (_pFinal.TercerLugarEquipoId.HasValue)     n++;
+            if (_pFinal.CuartoLugarEquipoId.HasValue)     n++;
+            if (_pFinal.MasGoleadorEquipoId.HasValue)     n++;
+            if (_pFinal.MasGoleadoEquipoId.HasValue)      n++;
+            if (_pFinal.MenosGoleadoEquipoId.HasValue)    n++;
+            if (_pFinal.GolesLocalGranFinal.HasValue)     n++;
             if (_pFinal.GolesVisitanteGranFinal.HasValue) n++;
-            if (_pFinal.GolesLocalSemi1.HasValue)        n++;
-            if (_pFinal.GolesVisitanteSemi1.HasValue)    n++;
-            if (_pFinal.GolesLocalSemi2.HasValue)        n++;
-            if (_pFinal.GolesVisitanteSemi2.HasValue)    n++;
+            if (_pFinal.GolesLocalSemi1.HasValue)         n++;
+            if (_pFinal.GolesVisitanteSemi1.HasValue)     n++;
+            if (_pFinal.GolesLocalSemi2.HasValue)         n++;
+            if (_pFinal.GolesVisitanteSemi2.HasValue)     n++;
         }
         return n;
     }
@@ -150,8 +150,8 @@ public partial class PlanillaDetalle : ComponentBase
     {
         if (_soloLectura) return;
         var ant = pred.EquipoLocalPredichoId;
-        pred.EquipoLocalPredichoId  = equipoId;
-        pred.EquipoLocalPredichado  = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
+        pred.EquipoLocalPredichoId = equipoId;
+        pred.EquipoLocalPredichado = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
         await PredSvc.GuardarR32LocalAsync(pred.Id, equipoId);
         await ActualizarProgreso(ant.HasValue, equipoId.HasValue);
         await MostrarCheckmark($"kol-{pred.Id}");
@@ -162,8 +162,8 @@ public partial class PlanillaDetalle : ComponentBase
     {
         if (_soloLectura) return;
         var ant = pred.EquipoVisitantePredichoId;
-        pred.EquipoVisitantePredichoId  = equipoId;
-        pred.EquipoVisitantePredichado  = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
+        pred.EquipoVisitantePredichoId = equipoId;
+        pred.EquipoVisitantePredichado = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
         await PredSvc.GuardarR32VisitanteAsync(pred.Id, equipoId);
         await ActualizarProgreso(ant.HasValue, equipoId.HasValue);
         await MostrarCheckmark($"kov-{pred.Id}");
@@ -179,11 +179,6 @@ public partial class PlanillaDetalle : ComponentBase
     }
 
     // ── Wrapper para FinalEquipoRow ───────────────────────────────────────────
-    /// <summary>
-    /// Centraliza el cambio de un campo de equipo en PrediccionFinal:
-    /// actualiza el setter, persiste y actualiza el progreso.
-    /// Evita duplicar la lógica ant/nuevo en cada OnValorChanged del razor.
-    /// </summary>
     internal async Task CambiarFinalEquipo(
         string campo,
         int? nuevoValor,
@@ -219,7 +214,7 @@ public partial class PlanillaDetalle : ComponentBase
         _ => ""
     };
 
-    // ── Candidatos por slot ───────────────────────────────────────────────────
+    // ── Candidatos por slot — lógica original ─────────────────────────────────
     internal List<Equipo> GetCandidatosParaSlot(string slot, int? excluirId = null, int? prediccionActualId = null)
     {
         var allKo = GetAllKo();
@@ -252,25 +247,18 @@ public partial class PlanillaDetalle : ComponentBase
             candidatos = [.. _equipos.Where(e => e.Grupo == grupo)];
         }
 
-        // ── GANADOR DE PARTIDO (G73, G101...) ─────────────────────────────────
+        // ── GANADOR DE PARTIDO (G73, G101...) ────────────────────────────────
         else if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
         {
             var src = allKo.FirstOrDefault(p => p.Partido.NumeroPartido == matchNum);
             if (src?.EquipoLocalPredichado is not null)    candidatos.Add(src.EquipoLocalPredichado);
             if (src?.EquipoVisitantePredichado is not null) candidatos.Add(src.EquipoVisitantePredichado);
 
-            // Excluir el equipo que el usuario ya seleccionó como PERDEDOR de esta
-            // misma semi en el partido de 3°/4° puesto (slot P{matchNum}).
-            // Ejemplo: slot G101 → buscar en partido #103 quién tiene P101 seleccionado.
             if (_tercero is not null)
             {
                 int? perdedorId = null;
-
-                if (_tercero.Partido.SlotLocal == $"P{matchNum}")
-                    perdedorId = _tercero.EquipoLocalPredichoId;
-                else if (_tercero.Partido.SlotVisitante == $"P{matchNum}")
-                    perdedorId = _tercero.EquipoVisitantePredichoId;
-
+                if (_tercero.Partido.SlotLocal    == $"P{matchNum}") perdedorId = _tercero.EquipoLocalPredichoId;
+                else if (_tercero.Partido.SlotVisitante == $"P{matchNum}") perdedorId = _tercero.EquipoVisitantePredichoId;
                 if (perdedorId.HasValue)
                     candidatos = [.. candidatos.Where(e => e.Id != perdedorId.Value)];
             }
@@ -283,17 +271,11 @@ public partial class PlanillaDetalle : ComponentBase
             if (semi?.EquipoLocalPredichado is not null)    candidatos.Add(semi.EquipoLocalPredichado);
             if (semi?.EquipoVisitantePredichado is not null) candidatos.Add(semi.EquipoVisitantePredichado);
 
-            // Excluir el equipo que el usuario ya seleccionó como GANADOR de esta
-            // misma semi en el partido de la final (slot G{semiNum}).
             if (_finalMatch is not null)
             {
                 int? ganadorId = null;
-
-                if (_finalMatch.Partido.SlotLocal == $"G{semiNum}")
-                    ganadorId = _finalMatch.EquipoLocalPredichoId;
-                else if (_finalMatch.Partido.SlotVisitante == $"G{semiNum}")
-                    ganadorId = _finalMatch.EquipoVisitantePredichoId;
-
+                if (_finalMatch.Partido.SlotLocal    == $"G{semiNum}") ganadorId = _finalMatch.EquipoLocalPredichoId;
+                else if (_finalMatch.Partido.SlotVisitante == $"G{semiNum}") ganadorId = _finalMatch.EquipoVisitantePredichoId;
                 if (ganadorId.HasValue)
                     candidatos = [.. candidatos.Where(e => e.Id != ganadorId.Value)];
             }
@@ -324,8 +306,8 @@ public partial class PlanillaDetalle : ComponentBase
 
     internal async Task ConfirmarResetTotal()
     {
-        _resetando   = true;
-        _errorReset  = null;
+        _resetando  = true;
+        _errorReset = null;
         try
         {
             await PredSvc.ResetTotalAsync(_planilla!.Id);

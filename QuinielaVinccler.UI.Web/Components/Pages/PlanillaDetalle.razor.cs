@@ -1,4 +1,4 @@
-﻿namespace QuinielaVinccler.UI.Web.Components.Pages;
+namespace QuinielaVinccler.UI.Web.Components.Pages;
 
 using Color = MudBlazor.Color;
 
@@ -16,6 +16,7 @@ public partial class PlanillaDetalle : ComponentBase
     // ── Datos ─────────────────────────────────────────────────────────────────
     private Planilla? _planilla;
     private List<Equipo> _equipos = [];
+    private Dictionary<int, Equipo> _equiposById = [];
 
     private Dictionary<string, List<PrediccionGrupo>> _grupoMap = [];
     private List<PrediccionKnockout> _r32 = [], _r16 = [], _cuartos = [], _semis = [];
@@ -32,7 +33,6 @@ public partial class PlanillaDetalle : ComponentBase
     private HashSet<string> _checkmarks = [];
 
     // ── Progreso ──────────────────────────────────────────────────────────────
-    // 72 grupos + 64 knockout (2 por partido x 32 partidos) + 13 final = 149
     private const int TotalCampos = 149;
     private int _camposCompletos;
 
@@ -56,7 +56,9 @@ public partial class PlanillaDetalle : ComponentBase
             return;
         }
 
-        _equipos = await PredSvc.GetEquiposAsync();
+        _equipos    = await PredSvc.GetEquiposAsync();
+        _equiposById = _equipos.ToDictionary(e => e.Id);
+
         _soloLectura = _planilla.Estado == EstadoPlanilla.Cerrada
                     || await ConfigSvc.QuinielaCerradaAsync();
 
@@ -74,58 +76,46 @@ public partial class PlanillaDetalle : ComponentBase
             .ToDictionary(g => g.Key, g => g.OrderBy(p => p.Partido.NumeroPartido).ToList());
 
         var ko = _planilla.PrediccionesKnockout.ToList();
-        _r32 = ko.Where(p => p.Partido.Fase == Fase.RoundOf32).OrderBy(p => p.Partido.NumeroPartido).ToList();
-        _r16 = ko.Where(p => p.Partido.Fase == Fase.RoundOf16).OrderBy(p => p.Partido.NumeroPartido).ToList();
-        _cuartos = ko.Where(p => p.Partido.Fase == Fase.Cuartos).OrderBy(p => p.Partido.NumeroPartido).ToList();
-        _semis = ko.Where(p => p.Partido.Fase == Fase.Semis).OrderBy(p => p.Partido.NumeroPartido).ToList();
-        _tercero = ko.FirstOrDefault(p => p.Partido.Fase == Fase.TercerPuesto);
+        _r32      = ko.Where(p => p.Partido.Fase == Fase.RoundOf32).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        _r16      = ko.Where(p => p.Partido.Fase == Fase.RoundOf16).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        _cuartos  = ko.Where(p => p.Partido.Fase == Fase.Cuartos).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        _semis    = ko.Where(p => p.Partido.Fase == Fase.Semis).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        _tercero  = ko.FirstOrDefault(p => p.Partido.Fase == Fase.TercerPuesto);
         _finalMatch = ko.FirstOrDefault(p => p.Partido.Fase == Fase.Final);
     }
 
-    private List<PrediccionKnockout> GetAllKo()
-    {
-        return _r32
-            .Concat(_r16)
-            .Concat(_cuartos)
-            .Concat(_semis)
-            .Concat(_tercero is null ? [] : [_tercero])
+    private List<PrediccionKnockout> GetAllKo() =>
+        _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
+            .Concat(_tercero    is null ? [] : [_tercero])
             .Concat(_finalMatch is null ? [] : [_finalMatch])
             .ToList();
-    }
+
     // ── Progreso ──────────────────────────────────────────────────────────────
     private int CalcularProgreso()
     {
         int n = 0;
-
-        // Grupos (72)
         n += _planilla!.PrediccionesGrupo.Count(p => p.ResultadoPredicho.HasValue);
 
-        // Knockout: local + visitante por cada partido (64)
-        var todosKo = _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
-                          .Concat(_tercero is null ? [] : [_tercero])
-                          .Concat(_finalMatch is null ? [] : [_finalMatch]);
-
+        var todosKo = GetAllKo();
         n += todosKo.Count(p => p.EquipoLocalPredichoId.HasValue);
         n += todosKo.Count(p => p.EquipoVisitantePredichoId.HasValue);
 
-        // Final (13)
         if (_pFinal is not null)
         {
-            if (_pFinal.CampeonEquipoId.HasValue) n++;
-            if (_pFinal.SegundoLugarEquipoId.HasValue) n++;
-            if (_pFinal.TercerLugarEquipoId.HasValue) n++;
-            if (_pFinal.CuartoLugarEquipoId.HasValue) n++;
-            if (_pFinal.MasGoleadorEquipoId.HasValue) n++;
-            if (_pFinal.MasGoleadoEquipoId.HasValue) n++;
-            if (_pFinal.MenosGoleadoEquipoId.HasValue) n++;
-            if (_pFinal.GolesLocalGranFinal.HasValue) n++;
+            if (_pFinal.CampeonEquipoId.HasValue)        n++;
+            if (_pFinal.SegundoLugarEquipoId.HasValue)   n++;
+            if (_pFinal.TercerLugarEquipoId.HasValue)    n++;
+            if (_pFinal.CuartoLugarEquipoId.HasValue)    n++;
+            if (_pFinal.MasGoleadorEquipoId.HasValue)    n++;
+            if (_pFinal.MasGoleadoEquipoId.HasValue)     n++;
+            if (_pFinal.MenosGoleadoEquipoId.HasValue)   n++;
+            if (_pFinal.GolesLocalGranFinal.HasValue)    n++;
             if (_pFinal.GolesVisitanteGranFinal.HasValue) n++;
-            if (_pFinal.GolesLocalSemi1.HasValue) n++;
-            if (_pFinal.GolesVisitanteSemi1.HasValue) n++;
-            if (_pFinal.GolesLocalSemi2.HasValue) n++;
-            if (_pFinal.GolesVisitanteSemi2.HasValue) n++;
+            if (_pFinal.GolesLocalSemi1.HasValue)        n++;
+            if (_pFinal.GolesVisitanteSemi1.HasValue)    n++;
+            if (_pFinal.GolesLocalSemi2.HasValue)        n++;
+            if (_pFinal.GolesVisitanteSemi2.HasValue)    n++;
         }
-
         return n;
     }
 
@@ -160,8 +150,8 @@ public partial class PlanillaDetalle : ComponentBase
     {
         if (_soloLectura) return;
         var ant = pred.EquipoLocalPredichoId;
-        pred.EquipoLocalPredichoId = equipoId;
-        pred.EquipoLocalPredichado = equipoId.HasValue ? _equipos.FirstOrDefault(e => e.Id == equipoId) : null;
+        pred.EquipoLocalPredichoId  = equipoId;
+        pred.EquipoLocalPredichado  = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
         await PredSvc.GuardarR32LocalAsync(pred.Id, equipoId);
         await ActualizarProgreso(ant.HasValue, equipoId.HasValue);
         await MostrarCheckmark($"kol-{pred.Id}");
@@ -172,8 +162,8 @@ public partial class PlanillaDetalle : ComponentBase
     {
         if (_soloLectura) return;
         var ant = pred.EquipoVisitantePredichoId;
-        pred.EquipoVisitantePredichoId = equipoId;
-        pred.EquipoVisitantePredichado = equipoId.HasValue ? _equipos.FirstOrDefault(e => e.Id == equipoId) : null;
+        pred.EquipoVisitantePredichoId  = equipoId;
+        pred.EquipoVisitantePredichado  = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null;
         await PredSvc.GuardarR32VisitanteAsync(pred.Id, equipoId);
         await ActualizarProgreso(ant.HasValue, equipoId.HasValue);
         await MostrarCheckmark($"kov-{pred.Id}");
@@ -188,6 +178,23 @@ public partial class PlanillaDetalle : ComponentBase
         await MostrarCheckmark($"f-{campo}");
     }
 
+    // ── Wrapper para FinalEquipoRow ───────────────────────────────────────────
+    /// <summary>
+    /// Centraliza el cambio de un campo de equipo en PrediccionFinal:
+    /// actualiza el setter, persiste y actualiza el progreso.
+    /// Evita duplicar la lógica ant/nuevo en cada OnValorChanged del razor.
+    /// </summary>
+    internal async Task CambiarFinalEquipo(
+        string campo,
+        int? nuevoValor,
+        Func<int?> getter,
+        Action<int?> setter)
+    {
+        var ant = getter();
+        setter(nuevoValor);
+        await GuardarFinal(campo, ant.HasValue, nuevoValor.HasValue);
+    }
+
     // ── Checkmark ─────────────────────────────────────────────────────────────
     private async Task MostrarCheckmark(string key)
     {
@@ -198,137 +205,118 @@ public partial class PlanillaDetalle : ComponentBase
         await InvokeAsync(StateHasChanged);
     }
 
+    // ── Helpers de UI ─────────────────────────────────────────────────────────
+    internal string? EquipoNombreById(int? id) =>
+        id.HasValue && _equiposById.TryGetValue(id.Value, out var e) ? e.Nombre : null;
+
+    internal bool TieneCheckmark(string key) => _checkmarks.Contains(key);
+
+    internal static string GetLabelResultado(ResultadoPartido r) => r switch
+    {
+        ResultadoPartido.Uno   => "1",
+        ResultadoPartido.Equis => "X",
+        ResultadoPartido.Dos   => "2",
+        _ => ""
+    };
+
     // ── Candidatos por slot ───────────────────────────────────────────────────
-    // Retorna los equipos disponibles para un slot dado
-    internal List<Equipo> GetCandidatosParaSlot(
-      string slot,
-      int? excluirId = null,
-      int? prediccionActualId = null)
+    internal List<Equipo> GetCandidatosParaSlot(string slot, int? excluirId = null, int? prediccionActualId = null)
     {
         var allKo = GetAllKo();
-
         List<Equipo> candidatos = [];
 
-        // =====================================================
-        // SLOTS DE MEJORES TERCEROS
-        // =====================================================
+        // ── MEJOR TERCERO (3XXXXX) ────────────────────────────────────────────
         if (slot.StartsWith("3"))
         {
-            var gruposPermitidos = slot[1..]
-                .Select(c => c.ToString())
-                .ToHashSet();
+            var gruposPermitidos = slot[1..].Select(c => c.ToString()).ToHashSet();
 
-            // Grupos ya consumidos como mejor tercero
             var gruposYaUsados = allKo
                 .Where(pk => pk.Id != prediccionActualId)
                 .SelectMany(pk => new[]
                 {
-                new
-                {
-                    Slot = pk.Partido.SlotLocal,
-                    Equipo = pk.EquipoLocalPredichado
-                },
-                new
-                {
-                    Slot = pk.Partido.SlotVisitante,
-                    Equipo = pk.EquipoVisitantePredichado
-                }
+                    new { Slot = pk.Partido.SlotLocal,     Equipo = pk.EquipoLocalPredichado },
+                    new { Slot = pk.Partido.SlotVisitante, Equipo = pk.EquipoVisitantePredichado }
                 })
-                .Where(x =>
-                    x.Equipo is not null &&
-                    x.Slot.StartsWith("3"))
+                .Where(x => x.Equipo is not null && x.Slot.StartsWith("3"))
                 .Select(x => x.Equipo!.Grupo)
                 .ToHashSet();
 
             gruposPermitidos.ExceptWith(gruposYaUsados);
-
             candidatos = [.. _equipos.Where(e => gruposPermitidos.Contains(e.Grupo))];
         }
 
-        // =====================================================
-        // SLOTS NORMALES DE GRUPO (1A, 2B...)
-        // =====================================================
-        else if (
-            slot.Length == 2 &&
-            (slot[0] == '1' || slot[0] == '2'))
+        // ── SLOT NORMAL DE GRUPO (1A, 2B...) ─────────────────────────────────
+        else if (slot.Length == 2 && (slot[0] == '1' || slot[0] == '2'))
         {
             var grupo = slot[1].ToString();
-
             candidatos = [.. _equipos.Where(e => e.Grupo == grupo)];
         }
 
-        // =====================================================
-        // GANADOR DE PARTIDO
-        // =====================================================
-        else if (
-            slot.StartsWith("G") &&
-            int.TryParse(slot[1..], out var matchNum))
+        // ── GANADOR DE PARTIDO (G73, G101...) ─────────────────────────────────
+        else if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
         {
-            var src = allKo
-                .FirstOrDefault(p =>
-                    p.Partido.NumeroPartido == matchNum);
+            var src = allKo.FirstOrDefault(p => p.Partido.NumeroPartido == matchNum);
+            if (src?.EquipoLocalPredichado is not null)    candidatos.Add(src.EquipoLocalPredichado);
+            if (src?.EquipoVisitantePredichado is not null) candidatos.Add(src.EquipoVisitantePredichado);
 
-            if (src?.EquipoLocalPredichado is not null)
-                candidatos.Add(src.EquipoLocalPredichado);
+            // Excluir el equipo que el usuario ya seleccionó como PERDEDOR de esta
+            // misma semi en el partido de 3°/4° puesto (slot P{matchNum}).
+            // Ejemplo: slot G101 → buscar en partido #103 quién tiene P101 seleccionado.
+            if (_tercero is not null)
+            {
+                int? perdedorId = null;
 
-            if (src?.EquipoVisitantePredichado is not null)
-                candidatos.Add(src.EquipoVisitantePredichado);
+                if (_tercero.Partido.SlotLocal == $"P{matchNum}")
+                    perdedorId = _tercero.EquipoLocalPredichoId;
+                else if (_tercero.Partido.SlotVisitante == $"P{matchNum}")
+                    perdedorId = _tercero.EquipoVisitantePredichoId;
+
+                if (perdedorId.HasValue)
+                    candidatos = [.. candidatos.Where(e => e.Id != perdedorId.Value)];
+            }
         }
 
-        // =====================================================
-        // PERDEDOR DE SEMIFINAL
-        // =====================================================
-        else if (
-            slot.StartsWith("P") &&
-            int.TryParse(slot[1..], out var semiNum))
+        // ── PERDEDOR DE SEMIFINAL (P101, P102) ───────────────────────────────
+        else if (slot.StartsWith("P") && int.TryParse(slot[1..], out var semiNum))
         {
-            var semi = _semis
-                .FirstOrDefault(p =>
-                    p.Partido.NumeroPartido == semiNum);
+            var semi = _semis.FirstOrDefault(p => p.Partido.NumeroPartido == semiNum);
+            if (semi?.EquipoLocalPredichado is not null)    candidatos.Add(semi.EquipoLocalPredichado);
+            if (semi?.EquipoVisitantePredichado is not null) candidatos.Add(semi.EquipoVisitantePredichado);
 
-            if (semi?.EquipoLocalPredichado is not null)
-                candidatos.Add(semi.EquipoLocalPredichado);
+            // Excluir el equipo que el usuario ya seleccionó como GANADOR de esta
+            // misma semi en el partido de la final (slot G{semiNum}).
+            if (_finalMatch is not null)
+            {
+                int? ganadorId = null;
 
-            if (semi?.EquipoVisitantePredichado is not null)
-                candidatos.Add(semi.EquipoVisitantePredichado);
+                if (_finalMatch.Partido.SlotLocal == $"G{semiNum}")
+                    ganadorId = _finalMatch.EquipoLocalPredichoId;
+                else if (_finalMatch.Partido.SlotVisitante == $"G{semiNum}")
+                    ganadorId = _finalMatch.EquipoVisitantePredichoId;
+
+                if (ganadorId.HasValue)
+                    candidatos = [.. candidatos.Where(e => e.Id != ganadorId.Value)];
+            }
         }
 
-        // =====================================================
-        // EXCLUIR EQUIPOS YA USADOS
-        // Solo aplica a slots de R32 (1X, 2X, 3XXXXX)
-        // Los slots GXX y PXX se llenan por cascada
-        // =====================================================
+        // ── EXCLUIR EQUIPOS YA USADOS EN R32 ─────────────────────────────────
         if (slot.Length == 2 || slot.StartsWith("3"))
         {
             var equiposYaUsados = allKo
                 .Where(pk => pk.Id != prediccionActualId)
-                .SelectMany(pk => new[]
-                {
-            pk.EquipoLocalPredichoId,
-            pk.EquipoVisitantePredichoId
-                })
+                .SelectMany(pk => new[] { pk.EquipoLocalPredichoId, pk.EquipoVisitantePredichoId })
                 .Where(id => id.HasValue)
                 .Select(id => id!.Value)
                 .ToHashSet();
 
             candidatos = [.. candidatos.Where(e => !equiposYaUsados.Contains(e.Id))];
         }
-        // =====================================================
-        // EXCLUIR EL OTRO SLOT DEL MISMO PARTIDO
-        // =====================================================
+
+        // ── EXCLUIR EL OTRO SLOT DEL MISMO PARTIDO ───────────────────────────
         if (excluirId.HasValue)
-        {
             candidatos = [.. candidatos.Where(e => e.Id != excluirId.Value)];
-        }
 
-        return [.. candidatos
-            .DistinctBy(e => e.Id)
-            .OrderBy(e => e.Nombre)];
-    }
-
-    internal bool EsSlotMejorTercero(string slot)
-    {
-        return slot.StartsWith("3");
+        return [.. candidatos.DistinctBy(e => e.Id).OrderBy(e => e.Nombre)];
     }
 
     // ── Reset total ───────────────────────────────────────────────────────────
@@ -336,9 +324,8 @@ public partial class PlanillaDetalle : ComponentBase
 
     internal async Task ConfirmarResetTotal()
     {
-        _resetando = true;
-        _errorReset = null;
-
+        _resetando   = true;
+        _errorReset  = null;
         try
         {
             await PredSvc.ResetTotalAsync(_planilla!.Id);
@@ -364,17 +351,6 @@ public partial class PlanillaDetalle : ComponentBase
     internal void CerrarResetTotal()
     {
         _showResetTotal = false;
-        _errorReset = null;
+        _errorReset     = null;
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    internal static string GetLabelResultado(ResultadoPartido r) => r switch
-    {
-        ResultadoPartido.Uno => "1",
-        ResultadoPartido.Equis => "X",
-        ResultadoPartido.Dos => "2",
-        _ => ""
-    };
-
-    internal bool TieneCheckmark(string key) => _checkmarks.Contains(key);
 }

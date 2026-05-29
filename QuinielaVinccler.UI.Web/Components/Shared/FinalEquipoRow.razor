@@ -1,0 +1,19 @@
+@namespace QuinielaVinccler.UI.Web.Components.Shared
+
+<MudItem xs="12" sm="6">
+    <div class="d-flex align-center gap-2 mb-2">
+        <MudText Typo="Typo.body2" Style="min-width:180px;">@Label</MudText>
+        <MudEquipoSelect Value="ValorActual"
+                         ValueChanged="async v => await OnValorChanged.InvokeAsync(v)"
+                         Items="ItemsPlanos"
+                         EquiposById="EquiposById"
+                         Disabled="SoloLectura"
+                         Clearable="@(!SoloLectura)"
+                         MinWidth="180px" />
+        @if (MostrarCheckmark)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                     Color="Color.Success" Size="Size.Small" />
+        }
+    </div>
+</MudItem>

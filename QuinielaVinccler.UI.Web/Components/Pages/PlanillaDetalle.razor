@@ -1,6 +1,7 @@
 @page "/planilla/{PlanillaId:int}"
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "Registrado")]
+@using QuinielaVinccler.UI.Web.Components.Shared
 
 <PageTitle>@(_planilla?.Codigo ?? "Planilla") – Quiniela FIFA 2026</PageTitle>
 
@@ -58,102 +59,186 @@ else
             </div>
         }
 
-        @* ── Tabs ──────────────────────────────────────────────────────────── *@
         <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
 
             @* ── Fase de Grupos ───────────────────────────────────────────── *@
             <MudTabPanel Text="Fase de Grupos">
-                <MudExpansionPanels MultiExpansion="true">
-                    @foreach (var (grupo, preds) in _grupoMap)
-                    {
-                        <MudExpansionPanel>
-                            <TitleContent>
-                                <MudText Typo="Typo.subtitle1" Style="font-weight:700;">Grupo @grupo</MudText>
-                            </TitleContent>
-                            <ChildContent>
-                                @foreach (var pred in preds)
-                                {
-                                    <div class="d-flex align-center justify-space-between flex-wrap gap-2 py-2"
-                                         style="border-bottom:1px solid rgba(0,0,0,.08);">
-                                        <div class="d-flex align-center gap-4" style="min-width:280px;">
-                                            <div class="d-flex align-center gap-1">
-                                                <img src="@pred.Partido.EquipoLocal!.FlagUrl" style="height:16px;" />
-                                                <MudText Typo="Typo.body2">@pred.Partido.EquipoLocal.Nombre</MudText>
-                                            </div>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">vs</MudText>
-                                            <div class="d-flex align-center gap-1">
-                                                <img src="@pred.Partido.EquipoVisitante!.FlagUrl" style="height:16px;" />
-                                                <MudText Typo="Typo.body2">@pred.Partido.EquipoVisitante.Nombre</MudText>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex align-center gap-1">
-                                            @foreach (var r in new[] { ResultadoPartido.Uno, ResultadoPartido.Equis, ResultadoPartido.Dos })
-                                            {
-                                                <MudButton Size="Size.Small"
-                                                           Variant="@(pred.ResultadoPredicho == r ? Variant.Filled : Variant.Outlined)"
-                                                           Color="@(pred.ResultadoPredicho == r ? Color.Primary : Color.Default)"
-                                                           OnClick="() => GuardarGrupo(pred, pred.ResultadoPredicho == r ? (ResultadoPartido?)null : r)"
-                                                           Disabled="_soloLectura"
-                                                           Style="min-width:40px;">
-                                                    @GetLabelResultado(r)
-                                                </MudButton>
-                                            }
-                                            @if (!_soloLectura && pred.ResultadoPredicho.HasValue)
-                                            {
-                                                <MudIconButton Icon="@Icons.Material.Filled.Clear"
-                                                               Size="Size.Small" Color="Color.Error"
-                                                               OnClick="() => GuardarGrupo(pred, null)" />
-                                            }
-                                            @if (TieneCheckmark($"g-{pred.Id}"))
-                                            {
-                                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                                         Color="Color.Success" Size="Size.Small" />
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                            </ChildContent>
-                        </MudExpansionPanel>
-                    }
-                </MudExpansionPanels>
-            </MudTabPanel>
-
-            @* ── Dieciseisavos ────────────────────────────────────────────── *@
-            <MudTabPanel Text="Dieciseisavos">
-                @TabKnockout(_r32)
-            </MudTabPanel>
-
-            @* ── Octavos ──────────────────────────────────────────────────── *@
-            <MudTabPanel Text="Octavos">
-                @TabKnockout(_r16)
-            </MudTabPanel>
-
-            @* ── Cuartos ──────────────────────────────────────────────────── *@
-            <MudTabPanel Text="Cuartos de Final">
-                @TabKnockout(_cuartos)
-            </MudTabPanel>
-
-            @* ── Semifinales ──────────────────────────────────────────────── *@
-            <MudTabPanel Text="Semifinales">
-                @TabKnockout(_semis)
-            </MudTabPanel>
-
-            @* ── 3ro y 4to ────────────────────────────────────────────────── *@
-            <MudTabPanel Text="3° y 4° Puesto">
-                @if (_tercero is not null)
+                @foreach (var (grupo, preds) in _grupoMap)
                 {
-                    @FilaKnockout(_tercero)
+                    @* ── Header de grupo ── *@
+                    <div class="d-flex align-center px-1 pt-4 pb-1 mb-1">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight:700;">Grupo @grupo</MudText>
+                    </div>
+                    <MudPaper Elevation="1" Class="mb-3 rounded">
+                        @foreach (var pred in preds)
+                        {
+                            <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
+
+                                @* ── Fecha ── *@
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary partido-fecha">
+                                    @pred.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+                                </MudText>
+
+                                @* ── Equipos ── *@
+                                <div class="grupo-fila__equipos">
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        <img src="@pred.Partido.EquipoLocal!.FlagUrl"
+                                             style="height:16px; flex-shrink:0;" />
+                                        <MudText Typo="Typo.body2"
+                                                 Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                            @pred.Partido.EquipoLocal.Nombre
+                                        </MudText>
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="flex-shrink:0; padding:0 4px;">vs</MudText>
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        <img src="@pred.Partido.EquipoVisitante!.FlagUrl"
+                                             style="height:16px; flex-shrink:0;" />
+                                        <MudText Typo="Typo.body2"
+                                                 Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                            @pred.Partido.EquipoVisitante.Nombre
+                                        </MudText>
+                                    </div>
+                                </div>
+
+                                @* ── Botones 1/X/2 ── *@
+                                <div class="grupo-fila__botones">
+                                    @foreach (var r in new[] { ResultadoPartido.Uno, ResultadoPartido.Equis, ResultadoPartido.Dos })
+                                    {
+                                        <MudButton Size="Size.Small"
+                                                   Variant="@(pred.ResultadoPredicho == r ? Variant.Filled : Variant.Outlined)"
+                                                   Color="@(pred.ResultadoPredicho == r ? Color.Primary : Color.Default)"
+                                                   OnClick="() => GuardarGrupo(pred, pred.ResultadoPredicho == r ? (ResultadoPartido?)null : r)"
+                                                   Disabled="_soloLectura"
+                                                   Style="min-width:36px; padding:0 4px;">
+                                            @GetLabelResultado(r)
+                                        </MudButton>
+                                    }
+                                    @if (!_soloLectura && pred.ResultadoPredicho.HasValue)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Clear"
+                                                       Size="Size.Small" Color="Color.Error"
+                                                       OnClick="() => GuardarGrupo(pred, null)" />
+                                    }
+                                    @if (TieneCheckmark($"g-{pred.Id}"))
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                                                 Color="Color.Success" Size="Size.Small" />
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </MudPaper>
                 }
             </MudTabPanel>
 
-            @* ── Gran Final ───────────────────────────────────────────────── *@
+            @* ── Fases eliminatorias ──────────────────────────────────────── *@
+            <MudTabPanel Text="Dieciseisavos">
+                @if (!_soloLectura)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4"
+                              Icon="@Icons.Material.Filled.Lightbulb">
+                        <strong>Recomendación:</strong> Completa primero los <strong>primeros</strong> y
+                        <strong>segundos</strong> de cada grupo — esos slots se llenan libremente.
+                        Los <strong>mejores terceros</strong> dependen de qué grupos aún no hayan sido usados,
+                        así que complétalos de último.
+                    </MudAlert>
+                }
+                @foreach (var pred in _r32)
+                {
+                    var keyL = $"kol-{pred.Id}";
+                    var keyV = $"kov-{pred.Id}";
+                    <KnockoutRow Pred="pred"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(pred, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(pred, v)" />
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Octavos">
+                @foreach (var pred in _r16)
+                {
+                    var keyL = $"kol-{pred.Id}";
+                    var keyV = $"kov-{pred.Id}";
+                    <KnockoutRow Pred="pred"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(pred, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(pred, v)" />
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Cuartos de Final">
+                @foreach (var pred in _cuartos)
+                {
+                    var keyL = $"kol-{pred.Id}";
+                    var keyV = $"kov-{pred.Id}";
+                    <KnockoutRow Pred="pred"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(pred, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(pred, v)" />
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="Semifinales">
+                @foreach (var pred in _semis)
+                {
+                    var keyL = $"kol-{pred.Id}";
+                    var keyV = $"kov-{pred.Id}";
+                    <KnockoutRow Pred="pred"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(pred, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(pred, v)" />
+                }
+            </MudTabPanel>
+
+            <MudTabPanel Text="3° y 4° Puesto">
+                @if (_tercero is not null)
+                {
+                    var keyL = $"kol-{_tercero.Id}";
+                    var keyV = $"kov-{_tercero.Id}";
+                    <KnockoutRow Pred="_tercero"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(_tercero, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(_tercero, v)" />
+                }
+            </MudTabPanel>
+
             <MudTabPanel Text="Gran Final">
                 @if (_finalMatch is not null)
                 {
+                    var keyL = $"kol-{_finalMatch.Id}";
+                    var keyV = $"kov-{_finalMatch.Id}";
                     <MudText Typo="Typo.subtitle2" Class="mb-3">
                         Partido #@_finalMatch.Partido.NumeroPartido — ¿Quiénes llegan a la final?
                     </MudText>
-                    @FilaKnockout(_finalMatch)
+                    <KnockoutRow Pred="_finalMatch"
+                                 EquiposById="_equiposById"
+                                 GetCandidatos="GetCandidatosParaSlot"
+                                 SoloLectura="_soloLectura"
+                                 MostrarCheckmarkLocal="@TieneCheckmark(keyL)"
+                                 MostrarCheckmarkVisitante="@TieneCheckmark(keyV)"
+                                 OnLocalChanged="async v => await GuardarKoLocal(_finalMatch, v)"
+                                 OnVisitanteChanged="async v => await GuardarKoVisitante(_finalMatch, v)" />
                     <MudDivider Class="my-4" />
                 }
 
@@ -166,10 +251,48 @@ else
                             </MudText>
                         </MudItem>
 
-                        @FilaFinalEquipo("Campeón (300 pts)",  "campeon",     _pFinal.CampeonEquipoId,      v => { _pFinal.CampeonEquipoId = v; })
-                        @FilaFinalEquipo("2° Lugar (200 pts)", "segundo",     _pFinal.SegundoLugarEquipoId, v => { _pFinal.SegundoLugarEquipoId = v; })
-                        @FilaFinalEquipo("3er Lugar (100 pts)","tercero",     _pFinal.TercerLugarEquipoId,  v => { _pFinal.TercerLugarEquipoId = v; })
-                        @FilaFinalEquipo("4° Lugar (50 pts)",  "cuarto",      _pFinal.CuartoLugarEquipoId,  v => { _pFinal.CuartoLugarEquipoId = v; })
+                        @{
+                            // Variables locales para evitar comillas anidadas en atributos
+                            var campeonKey   = "f-campeon";
+                            var segundoKey   = "f-segundo";
+                            var terceroKey   = "f-tercero";
+                            var cuartoKey    = "f-cuarto";
+                            var masGolKey    = "f-masGoleador";
+                            var masGoldKey   = "f-masGoleado";
+                            var menosGolKey  = "f-menosGoleado";
+                        }
+
+                        <FinalEquipoRow Label="Campeón (300 pts)"
+                                        ValorActual="_pFinal.CampeonEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(campeonKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(campeonKey, v, () => _pFinal.CampeonEquipoId, x => _pFinal.CampeonEquipoId = x)" />
+
+                        <FinalEquipoRow Label="2° Lugar (200 pts)"
+                                        ValorActual="_pFinal.SegundoLugarEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(segundoKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(segundoKey, v, () => _pFinal.SegundoLugarEquipoId, x => _pFinal.SegundoLugarEquipoId = x)" />
+
+                        <FinalEquipoRow Label="3er Lugar (100 pts)"
+                                        ValorActual="_pFinal.TercerLugarEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(terceroKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(terceroKey, v, () => _pFinal.TercerLugarEquipoId, x => _pFinal.TercerLugarEquipoId = x)" />
+
+                        <FinalEquipoRow Label="4° Lugar (50 pts)"
+                                        ValorActual="_pFinal.CuartoLugarEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(cuartoKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(cuartoKey, v, () => _pFinal.CuartoLugarEquipoId, x => _pFinal.CuartoLugarEquipoId = x)" />
 
                         <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
 
@@ -179,9 +302,29 @@ else
                             </MudText>
                         </MudItem>
 
-                        @FilaFinalEquipo("Equipo más goleador",  "masGoleador",  _pFinal.MasGoleadorEquipoId,  v => { _pFinal.MasGoleadorEquipoId = v; })
-                        @FilaFinalEquipo("Equipo más goleado",   "masGoleado",   _pFinal.MasGoleadoEquipoId,   v => { _pFinal.MasGoleadoEquipoId = v; })
-                        @FilaFinalEquipo("Equipo menos goleado", "menosGoleado", _pFinal.MenosGoleadoEquipoId, v => { _pFinal.MenosGoleadoEquipoId = v; })
+                        <FinalEquipoRow Label="Equipo más goleador"
+                                        ValorActual="_pFinal.MasGoleadorEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(masGolKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(masGolKey, v, () => _pFinal.MasGoleadorEquipoId, x => _pFinal.MasGoleadorEquipoId = x)" />
+
+                        <FinalEquipoRow Label="Equipo más goleado"
+                                        ValorActual="_pFinal.MasGoleadoEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(masGoldKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(masGoldKey, v, () => _pFinal.MasGoleadoEquipoId, x => _pFinal.MasGoleadoEquipoId = x)" />
+
+                        <FinalEquipoRow Label="Equipo menos goleado"
+                                        ValorActual="_pFinal.MenosGoleadoEquipoId"
+                                        Equipos="_equipos"
+                                        EquiposById="_equiposById"
+                                        SoloLectura="_soloLectura"
+                                        MostrarCheckmark="@TieneCheckmark(menosGolKey)"
+                                        OnValorChanged="async v => await CambiarFinalEquipo(menosGolKey, v, () => _pFinal.MenosGoleadoEquipoId, x => _pFinal.MenosGoleadoEquipoId = x)" />
 
                         <MudItem xs="12"><MudDivider Class="my-2" /></MudItem>
 
@@ -208,7 +351,6 @@ else
         </MudTabs>
     </MudContainer>
 
-    @* ── Diálogo Reset Total ────────────────────────────────────────────────── *@
     <MudDialog @bind-Visible="_showResetTotal">
         <TitleContent>
             <div class="d-flex align-center gap-2">
@@ -239,127 +381,18 @@ else
                     <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     <span>Reseteando...</span>
                 }
-                else { <span>Sí, resetear todo</span> }
+                else
+                {
+                    <span>Sí, resetear todo</span>
+                }
             </MudButton>
         </DialogActions>
     </MudDialog>
 }
 
-@* ── Render fragments ─────────────────────────────────────────────────────── *@
 @code {
-    // Tab con lista de partidos knockout (mismo patrón para todos)
-    RenderFragment TabKnockout(List<PrediccionKnockout> preds) =>
-        @<div>@foreach (var pred in preds) { @FilaKnockout(pred) }</div>;
-
-    // Fila de partido knockout con 2 slots (local + visitante)
-    RenderFragment FilaKnockout(PrediccionKnockout pred) =>
-        @<MudPaper Elevation="1" Class="pa-3 mb-3 rounded">
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                Partido #@pred.Partido.NumeroPartido
-            </MudText>
-            <div class="d-flex align-center gap-2 flex-wrap">
-
-                @* Slot local *@
-                <div class="d-flex flex-column" style="min-width:200px;">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
-                        @pred.Partido.SlotLocal
-                    </MudText>
-                    <div class="d-flex align-center gap-1">
-                        <MudSelect T="int?"
-                                   Value="pred.EquipoLocalPredichoId"
-                                   ValueChanged="async v => await GuardarKoLocal(pred, v)"
-                                   Disabled="_soloLectura" Dense="true"
-                                   Variant="Variant.Outlined"
-                                   Placeholder="Seleccionar">
-                            <MudSelectItem T="int?" Value="(int?)null">-- Seleccionar --</MudSelectItem>
-                            @foreach (var eq in GetCandidatosParaSlot(pred.Partido.SlotLocal, pred.EquipoVisitantePredichoId))
-                            {
-                                <MudSelectItem T="int?" Value="(int?)eq.Id">
-                                    <div class="d-flex align-center gap-1">
-                                        <img src="@eq.FlagUrl" style="height:14px;" /> @eq.Nombre
-                                    </div>
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                        @if (!_soloLectura && pred.EquipoLocalPredichoId.HasValue)
-                        {
-                            <MudIconButton Icon="@Icons.Material.Filled.Clear"
-                                           Size="Size.Small" Color="Color.Error"
-                                           OnClick="async () => await GuardarKoLocal(pred, null)" />
-                        }
-                        @if (TieneCheckmark($"kol-{pred.Id}"))
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                     Color="Color.Success" Size="Size.Small" />
-                        }
-                    </div>
-                </div>
-
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mx-1 mt-3">vs</MudText>
-
-                @* Slot visitante *@
-                <div class="d-flex flex-column" style="min-width:200px;">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
-                        @pred.Partido.SlotVisitante
-                    </MudText>
-                    <div class="d-flex align-center gap-1">
-                        <MudSelect T="int?"
-                                   Value="pred.EquipoVisitantePredichoId"
-                                   ValueChanged="async v => await GuardarKoVisitante(pred, v)"
-                                   Disabled="_soloLectura" Dense="true"
-                                   Variant="Variant.Outlined"
-                                   Placeholder="Seleccionar">
-                            <MudSelectItem T="int?" Value="(int?)null">-- Seleccionar --</MudSelectItem>
-                            @foreach (var eq in GetCandidatosParaSlot(pred.Partido.SlotVisitante, pred.EquipoLocalPredichoId))
-                            {
-                                <MudSelectItem T="int?" Value="(int?)eq.Id">
-                                    <div class="d-flex align-center gap-1">
-                                        <img src="@eq.FlagUrl" style="height:14px;" /> @eq.Nombre
-                                    </div>
-                                </MudSelectItem>
-                            }
-                        </MudSelect>
-                        @if (!_soloLectura && pred.EquipoVisitantePredichoId.HasValue)
-                        {
-                            <MudIconButton Icon="@Icons.Material.Filled.Clear"
-                                           Size="Size.Small" Color="Color.Error"
-                                           OnClick="async () => await GuardarKoVisitante(pred, null)" />
-                        }
-                        @if (TieneCheckmark($"kov-{pred.Id}"))
-                        {
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
-                                     Color="Color.Success" Size="Size.Small" />
-                        }
-                    </div>
-                </div>
-            </div>
-        </MudPaper>;
-
-    RenderFragment FilaFinalEquipo(string label, string campo, int? valorActual, Action<int?> setter) =>
-        @<MudItem xs="12" sm="6">
-            <div class="d-flex align-center gap-2 mb-2">
-                <MudText Typo="Typo.body2" Style="min-width:180px;">@label</MudText>
-                <MudSelect T="int?" Value="valorActual"
-                           ValueChanged="async v => { var ant = valorActual; setter(v); await GuardarFinal(campo, ant.HasValue, v.HasValue); }"
-                           Disabled="_soloLectura" Dense="true" Variant="Variant.Outlined"
-                           Style="min-width:180px;" Placeholder="Seleccionar">
-                    <MudSelectItem T="int?" Value="(int?)null">-- Seleccionar --</MudSelectItem>
-                    @foreach (var eq in _equipos)
-                    {
-                        <MudSelectItem T="int?" Value="(int?)eq.Id">
-                            <div class="d-flex align-center gap-2">
-                                <img src="@eq.FlagUrl" style="height:14px;" /> @eq.Nombre
-                            </div>
-                        </MudSelectItem>
-                    }
-                </MudSelect>
-                @if (TieneCheckmark($"f-{campo}"))
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
-                }
-            </div>
-        </MudItem>;
-
+    // FilaScore permanece como RenderFragment local — solo MudNumericField,
+    // sin SelectedItemTemplate, sin problema de context.
     RenderFragment FilaScore(string label, string campoL, string campoV,
         int? golesL, int? golesV, Action<int?> setL, Action<int?> setV) =>
         @<MudItem xs="12" sm="6">
@@ -381,3 +414,68 @@ else
             </div>
         </MudItem>;
 }
+
+<style>
+    /* ── Fila de partido en fase de grupos ─────────────────────────────────── */
+
+    /* fecha arriba full-width, equipos y botones en segunda fila */
+    .grupo-fila {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 8px 0;
+    }
+
+    .partido-fecha {
+        grid-column: 1 / -1;
+        opacity: 0.6;
+        font-size: 0.7rem;
+    }
+
+    .grupo-fila__equipos {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+        gap: 4px;
+    }
+
+    .grupo-fila__equipos > div {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .grupo-fila__botones {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    /* Mobile: cada equipo en su propia línea, botones debajo */
+    @@media (max-width: 480px) {
+        .grupo-fila {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+        }
+
+        .grupo-fila__equipos {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+        .grupo-fila__equipos > div {
+            width: 100%;
+        }
+
+        .grupo-fila__botones {
+            justify-content: flex-start;
+            padding-top: 2px;
+        }
+    }
+</style>

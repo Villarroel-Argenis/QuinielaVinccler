@@ -1,0 +1,127 @@
+@namespace QuinielaVinccler.UI.Web.Components.Shared
+
+<div class="equipo-select-wrapper" style="min-width:@MinWidth; position:relative;">
+
+    @* ── Trigger ─────────────────────────────────────────────────────────── *@
+    <MudPaper Elevation="0"
+              Class="@TriggerClass"
+              Style="@TriggerStyle"
+              @onclick="ToggleOpen">
+        <div class="d-flex align-center justify-space-between" style="width:100%;">
+            <div class="d-flex align-center gap-2" style="overflow:hidden;">
+                @if (_equipoSeleccionado is not null)
+                {
+                    <img src="@_equipoSeleccionado.FlagUrl"
+                         style="height:16px; flex-shrink:0;" />
+                    <MudText Typo="Typo.body2"
+                             Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        @_equipoSeleccionado.Nombre
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        @Placeholder
+                    </MudText>
+                }
+            </div>
+            <div class="d-flex align-center" style="flex-shrink:0;">
+                @if (Clearable && _equipoSeleccionado is not null && !Disabled)
+                {
+                    <div @onclick="async () => await LimpiarAsync()"
+                         @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small" />
+                    </div>
+                }
+                <MudIcon Icon="@(_open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                         Size="Size.Small"
+                         Class="mud-text-secondary" />
+            </div>
+        </div>
+    </MudPaper>
+
+    @* ── Popover: escapa el overflow:hidden de cualquier ancestro ─────────── *@
+    <MudPopover Open="_open"
+                AnchorOrigin="Origin.BottomLeft"
+                TransformOrigin="Origin.TopLeft"
+                RelativeWidth="DropdownWidth.Adaptive"
+                Paper="true"
+                Elevation="8"
+                Style="max-height:260px; overflow-y:auto; z-index:1300;">
+        @foreach (var item in Items)
+        {
+            @if (item.EsHeader)
+            {
+                <div class="px-3 py-1" style="background:var(--mud-palette-background-grey);">
+                    <MudText Typo="Typo.caption" Style="font-weight:700;">
+                        ── Grupo @item.Grupo ──
+                    </MudText>
+                </div>
+            }
+            else if (item.Equipo is not null)
+            {
+                var eq = item.Equipo;
+                var esSeleccionado = Value == eq.Id;
+                <div class="equipo-select-item d-flex align-center gap-2 px-3 py-2 @(esSeleccionado ? "equipo-select-item--selected" : "")"
+                     style="cursor:pointer;"
+                     @onclick="async () => await SeleccionarAsync(eq.Id)">
+                    <img src="@eq.FlagUrl" style="height:16px; flex-shrink:0;" />
+                    <MudText Typo="Typo.body2">@eq.Nombre</MudText>
+                    @if (esSeleccionado)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check"
+                                 Size="Size.Small"
+                                 Color="Color.Primary"
+                                 Style="margin-left:auto;" />
+                    }
+                </div>
+            }
+        }
+    </MudPopover>
+
+    @* ── Overlay transparente para cerrar al tocar fuera ─────────────────── *@
+    @if (_open)
+    {
+        <MudOverlay Visible="_open"
+                    OnClick="Cerrar"
+                    AutoClose="true"
+                    ZIndex="1299" />
+    }
+</div>
+
+<style>
+    .equipo-select-trigger {
+        border: 1px solid var(--mud-palette-lines-inputs);
+        border-radius: var(--mud-default-borderradius);
+        padding: 6px 8px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        background: var(--mud-palette-surface);
+        min-height: 40px;
+    }
+
+    .equipo-select-trigger:hover:not(.equipo-select-trigger--disabled) {
+        border-color: var(--mud-palette-primary);
+    }
+
+    .equipo-select-trigger--disabled {
+        opacity: 0.6;
+        cursor: default;
+        pointer-events: none;
+        background: var(--mud-palette-background-grey);
+    }
+
+    .equipo-select-item {
+        transition: background 0.15s;
+        min-height: 40px;
+    }
+
+    .equipo-select-item:hover {
+        background: var(--mud-palette-action-default-hover);
+    }
+
+    .equipo-select-item--selected {
+        background: var(--mud-palette-primary-hover);
+    }
+</style>

@@ -1,0 +1,56 @@
+@namespace QuinielaVinccler.UI.Web.Components.Shared
+
+<MudPaper Elevation="1" Class="pa-3 mb-3 rounded">
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+        Partido #@Pred.Partido.NumeroPartido
+        <span style="opacity:0.6; margin-left:8px;">
+            @Pred.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+        </span>
+    </MudText>
+    <div class="d-flex align-center gap-2 flex-wrap">
+
+        @* ── Slot local ──────────────────────────────────────────────────── *@
+        <div class="d-flex flex-column" style="min-width:200px; flex:1;">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                @Pred.Partido.SlotLocal
+            </MudText>
+            <div class="d-flex align-center gap-1">
+                <MudEquipoSelect Value="Pred.EquipoLocalPredichoId"
+                                 ValueChanged="async v => await OnLocalChanged.InvokeAsync(v)"
+                                 Items="CandidatosLocalAgrupados"
+                                 EquiposById="EquiposById"
+                                 Disabled="SoloLectura"
+                                 Clearable="@(!SoloLectura)"
+                                 MinWidth="100%" />
+                @if (MostrarCheckmarkLocal)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                             Color="Color.Success" Size="Size.Small" />
+                }
+            </div>
+        </div>
+
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mx-1 mt-3">vs</MudText>
+
+        @* ── Slot visitante ───────────────────────────────────────────────── *@
+        <div class="d-flex flex-column" style="min-width:200px; flex:1;">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                @Pred.Partido.SlotVisitante
+            </MudText>
+            <div class="d-flex align-center gap-1">
+                <MudEquipoSelect Value="Pred.EquipoVisitantePredichoId"
+                                 ValueChanged="async v => await OnVisitanteChanged.InvokeAsync(v)"
+                                 Items="CandidatosVisitanteAgrupados"
+                                 EquiposById="EquiposById"
+                                 Disabled="SoloLectura"
+                                 Clearable="@(!SoloLectura)"
+                                 MinWidth="100%" />
+                @if (MostrarCheckmarkVisitante)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                             Color="Color.Success" Size="Size.Small" />
+                }
+            </div>
+        </div>
+    </div>
+</MudPaper>

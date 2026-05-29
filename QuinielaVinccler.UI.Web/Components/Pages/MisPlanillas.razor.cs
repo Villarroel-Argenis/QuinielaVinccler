@@ -1,5 +1,6 @@
-﻿namespace QuinielaVinccler.UI.Web.Components.Pages;
+namespace QuinielaVinccler.UI.Web.Components.Pages;
 using Color = MudBlazor.Color;
+
 public partial class MisPlanillas : ComponentBase
 {
     [Inject] private IPlanillaService PlanillaSvc { get; set; } = null!;
@@ -16,12 +17,6 @@ public partial class MisPlanillas : ComponentBase
     private bool _cargando = true;
     private bool _quinielaCerrada;
     private int _userId;
-
-    // Desvincular
-    private bool _showConfirmDesvincular;
-    private bool _desvinculando;
-    private string? _errorDesvincular;
-    private Planilla? _planillaSeleccionada;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,70 +71,23 @@ public partial class MisPlanillas : ComponentBase
         }
     }
 
-    // ── Desvincular ──────────────────────────────────────────────────────────
-    private void ConfirmarDesvincular(Planilla planilla)
-    {
-        _planillaSeleccionada = planilla;
-        _errorDesvincular = null;
-        _showConfirmDesvincular = true;
-    }
-
-    private void CancelarDesvincular()
-    {
-        _showConfirmDesvincular = false;
-        _planillaSeleccionada = null;
-        _errorDesvincular = null;
-    }
-
-    private async Task EjecutarDesvincular()
-    {
-        if (_planillaSeleccionada is null) return;
-
-        _desvinculando = true;
-        _errorDesvincular = null;
-
-        try
-        {
-            var (exito, error) = await PlanillaSvc.DesvincularAsync(_planillaSeleccionada.Id, _userId);
-
-            if (exito)
-            {
-                _showConfirmDesvincular = false;
-                _planillaSeleccionada = null;
-                _planillas = await PlanillaSvc.GetPlanillasByUserAsync(_userId);
-            }
-            else
-            {
-                _errorDesvincular = error;
-            }
-        }
-        catch
-        {
-            _errorDesvincular = "Ocurrió un error inesperado. Intenta de nuevo.";
-        }
-        finally
-        {
-            _desvinculando = false;
-        }
-    }
-
     // ── Helpers ──────────────────────────────────────────────────────────────
-    private static Color GetColorEstado(EstadoPlanilla estado) => estado switch
+    internal static Color GetColorEstado(EstadoPlanilla estado) => estado switch
     {
-        EstadoPlanilla.Asignada => Color.Info,
+        EstadoPlanilla.Asignada   => Color.Info,
         EstadoPlanilla.EnProgreso => Color.Warning,
-        EstadoPlanilla.Completa => Color.Success,
-        EstadoPlanilla.Cerrada => Color.Error,
-        _ => Color.Default,
+        EstadoPlanilla.Completa   => Color.Success,
+        EstadoPlanilla.Cerrada    => Color.Error,
+        _                         => Color.Default,
     };
 
-    private static string GetLabelEstado(EstadoPlanilla estado) => estado switch
+    internal static string GetLabelEstado(EstadoPlanilla estado) => estado switch
     {
         EstadoPlanilla.SinAsignar => "Sin asignar",
-        EstadoPlanilla.Asignada => "Asignada",
+        EstadoPlanilla.Asignada   => "Asignada",
         EstadoPlanilla.EnProgreso => "En progreso",
-        EstadoPlanilla.Completa => "Completa",
-        EstadoPlanilla.Cerrada => "Cerrada",
-        _ => estado.ToString(),
+        EstadoPlanilla.Completa   => "Completa",
+        EstadoPlanilla.Cerrada    => "Cerrada",
+        _                         => estado.ToString(),
     };
 }

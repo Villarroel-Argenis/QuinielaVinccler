@@ -1,6 +1,7 @@
-﻿@page "/admin"
+@page "/admin"
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "SoloAdmin")]
+@using QuinielaVinccler.UI.Web.Components.Admin
 
 <PageTitle>Panel Administrador</PageTitle>
 
@@ -9,9 +10,13 @@
 
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true">
 
-        <!-- TAB 1: Generar Lotes -->
         <MudTabPanel Text="Generar Planillas" Icon="@Icons.Material.Filled.Add">
-            <LoteComponent/>
+            <LoteComponent />
         </MudTabPanel>
+
+        <MudTabPanel Text="Gestión de Planillas" Icon="@Icons.Material.Filled.ManageSearch">
+            <GestionPlanillasComponent />
+        </MudTabPanel>
+
     </MudTabs>
 </MudContainer>

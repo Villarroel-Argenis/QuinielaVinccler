@@ -76,6 +76,7 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
         }
     }
 
+    // ── Desvinculación por usuario ────────────────────────────────────────────
     public async Task<(bool Exito, string? Error)> DesvincularAsync(int planillaId, int userId)
     {
         var planilla = await db.Planillas
@@ -90,25 +91,79 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
         if (await configuracion.QuinielaCerradaAsync())
             return (false, "La quiniela está cerrada. No se pueden desvincular planillas.");
 
+        return await EjecutarDesvinculacion(planilla);
+    }
+
+    // ── Desvinculación por admin (sin restricciones) ──────────────────────────
+    public async Task<(bool Exito, string? Error)> DesvincularAdminAsync(int planillaId)
+    {
+        var planilla = await db.Planillas
+            .FirstOrDefaultAsync(p => p.Id == planillaId);
+
+        if (planilla is null)
+            return (false, "Planilla no encontrada.");
+
+        if (!planilla.IsAssigned)
+            return (false, "La planilla no está vinculada a ningún usuario.");
+
+        return await EjecutarDesvinculacion(planilla);
+    }
+
+    // ── Búsqueda para panel admin ─────────────────────────────────────────────
+    public async Task<List<PlanillaAdminDto>> BuscarPlanillasAsync(string termino)
+    {
+        termino = termino.Trim().ToUpper();
+
+        var query = db.Planillas
+            .Where(p => p.UserId != null)
+            .Join(db.Users,
+                p => p.UserId,
+                u => u.Id,
+                (p, u) => new { Planilla = p, Usuario = u });
+
+        if (!string.IsNullOrWhiteSpace(termino))
+        {
+            query = query.Where(x =>
+                x.Planilla.Codigo.Contains(termino) ||
+                x.Usuario.FullName.ToUpper().Contains(termino) ||
+                x.Usuario.Email.ToUpper().Contains(termino) ||
+                x.Usuario.CI.Contains(termino));
+        }
+
+        return await query
+            .OrderByDescending(x => x.Planilla.AssignedAt)
+            .Take(50) // límite para no traer toda la tabla
+            .Select(x => new PlanillaAdminDto(
+                x.Planilla.Id,
+                x.Planilla.Codigo,
+                x.Planilla.Estado,
+                x.Planilla.PuntajeTotal,
+                x.Planilla.AssignedAt,
+                x.Usuario.FullName,
+                x.Usuario.Email,
+                x.Usuario.CI))
+            .ToListAsync();
+    }
+
+    // ── Lógica compartida de desvinculación ───────────────────────────────────
+    private async Task<(bool Exito, string? Error)> EjecutarDesvinculacion(Planilla planilla)
+    {
         await using var tx = await db.Database.BeginTransactionAsync();
 
         try
         {
-            // Elimina predicciones — el cascade de FK se encarga,
-            // pero lo hacemos explícito para evitar depender de la configuración del servidor
             await db.PrediccionesGrupo
-                .Where(p => p.PlanillaId == planillaId)
+                .Where(p => p.PlanillaId == planilla.Id)
                 .ExecuteDeleteAsync();
 
             await db.PrediccionesKnockout
-                .Where(p => p.PlanillaId == planillaId)
+                .Where(p => p.PlanillaId == planilla.Id)
                 .ExecuteDeleteAsync();
 
             await db.PrediccionesFinal
-                .Where(p => p.PlanillaId == planillaId)
+                .Where(p => p.PlanillaId == planilla.Id)
                 .ExecuteDeleteAsync();
 
-            // Resetea la planilla
             planilla.UserId = null;
             planilla.AssignedAt = null;
             planilla.Estado = EstadoPlanilla.SinAsignar;

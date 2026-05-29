@@ -148,14 +148,6 @@
                                        Href="@($"/planilla/{planilla.Id}")">
                                 Predecir
                             </MudButton>
-
-                            <MudButton Variant="Variant.Outlined"
-                                       Size="Size.Small"
-                                       Color="Color.Error"
-                                       StartIcon="@Icons.Material.Filled.LinkOff"
-                                       OnClick="() => ConfirmarDesvincular(planilla)">
-                                Desvincular
-                            </MudButton>
                         }
                     </div>
                 </div>
@@ -164,51 +156,3 @@
     }
 
 </MudContainer>
-
-@* ── Diálogo de confirmación desvincular ─────────────────────────────────── *@
-<MudDialog @bind-Visible="_showConfirmDesvincular">
-    <TitleContent>
-        <div class="d-flex align-center gap-2">
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
-            <MudText Typo="Typo.h6">Desvincular planilla</MudText>
-        </div>
-    </TitleContent>
-    <DialogContent>
-        <MudText Class="mb-3">
-            ¿Estás seguro que deseas desvincular la planilla
-            <strong>@_planillaSeleccionada?.Codigo</strong>?
-        </MudText>
-        <MudAlert Severity="Severity.Warning" Dense="true">
-            Esta acción restaurará la planilla a su estado original y
-            <strong>eliminará todas tus predicciones</strong>. No se puede deshacer.
-        </MudAlert>
-
-        @if (_errorDesvincular is not null)
-        {
-            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">
-                @_errorDesvincular
-            </MudAlert>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CancelarDesvincular"
-                   Disabled="_desvinculando">
-            Cancelar
-        </MudButton>
-        <MudButton Color="Color.Error"
-                   Variant="Variant.Filled"
-                   OnClick="EjecutarDesvincular"
-                   Disabled="_desvinculando"
-                   StartIcon="@Icons.Material.Filled.LinkOff">
-            @if (_desvinculando)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                <span>Desvinculando...</span>
-            }
-            else
-            {
-                <span>Sí, desvincular</span>
-            }
-        </MudButton>
-    </DialogActions>
-</MudDialog>

@@ -27,7 +27,7 @@ public partial class PlanillaModal : ComponentBase
         (Fase.Cuartos,      "Cuartos"),
         (Fase.Semis,        "Semis"),
         (Fase.TercerPuesto, "3°/4°"),
-        (Fase.Final,        "Final"),
+        (Fase.Final,        "Gran Final"),
     ];
 
     // ── Indicadores de progreso ───────────────────────────────────────────────

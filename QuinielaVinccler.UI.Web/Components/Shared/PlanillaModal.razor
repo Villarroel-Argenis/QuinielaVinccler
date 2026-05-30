@@ -176,6 +176,10 @@
                                                 @localEquipo.Nombre
                                             </MudText>
                                             @IconoSlot(pk.EquipoLocalPredichoId, slotsR32, true, tieneResultadoReal)
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                     Style="height:18px;font-size:0.7rem;">
+                                                @pk.Partido.SlotLocal
+                                            </MudChip>
                                         }
                                         else
                                         {
@@ -194,6 +198,10 @@
                                                 @visitEquipo.Nombre
                                             </MudText>
                                             @IconoSlot(pk.EquipoVisitantePredichoId, slotsR32, false, tieneResultadoReal)
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                     Style="height:18px;font-size:0.7rem;">
+                                                @pk.Partido.SlotVisitante
+                                            </MudChip>
                                         }
                                         else
                                         {
@@ -253,6 +261,10 @@
                                                 @localEquipo.Nombre
                                             </MudText>
                                             @IconoSlot(pk.EquipoLocalPredichoId, slotsKo, true, tieneResultadoReal)
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                     Style="height:18px;font-size:0.7rem;">
+                                                @pk.Partido.SlotLocal
+                                            </MudChip>
                                         }
                                         else
                                         {
@@ -271,6 +283,10 @@
                                                 @visitEquipo.Nombre
                                             </MudText>
                                             @IconoSlot(pk.EquipoVisitantePredichoId, slotsKo, false, tieneResultadoReal)
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                     Style="height:18px;font-size:0.7rem;">
+                                                @pk.Partido.SlotVisitante
+                                            </MudChip>
                                         }
                                         else
                                         {
@@ -332,6 +348,10 @@
                                                     @localEquipo2.Nombre
                                                 </MudText>
                                                 @IconoSlot(pk.EquipoLocalPredichoId, slotsKo2, true, tieneResultadoReal2)
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                         Style="height:18px;font-size:0.7rem;">
+                                                    @pk.Partido.SlotLocal
+                                                </MudChip>
                                             }
                                             else
                                             {
@@ -350,6 +370,10 @@
                                                     @visitEquipo2.Nombre
                                                 </MudText>
                                                 @IconoSlot(pk.EquipoVisitantePredichoId, slotsKo2, false, tieneResultadoReal2)
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                                         Style="height:18px;font-size:0.7rem;">
+                                                    @pk.Partido.SlotVisitante
+                                                </MudChip>
                                             }
                                             else
                                             {

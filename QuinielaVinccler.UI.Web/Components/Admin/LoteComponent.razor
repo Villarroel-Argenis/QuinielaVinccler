@@ -53,7 +53,25 @@
 
     @if (_lotes.Any())
     {
-        <MudText Typo="Typo.h6" Class="mt-6 mb-3">Lotes generados</MudText>
+        @* ── Header con totales desglosados ── *@
+        <div class="d-flex align-center justify-space-between mt-6 mb-3 flex-wrap gap-2">
+            <MudText Typo="Typo.h6">Lotes generados</MudText>
+            <div class="d-flex align-center gap-2 flex-wrap">
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.Inventory2">
+                    @_lotes.Sum(l => l.Cantidad) planillas en total
+                </MudChip>
+                <MudChip T="string" Color="Color.Success" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.CheckCircle">
+                    @_lotes.Sum(l => l.Planillas.Count(p => p.IsAssigned)) asignadas
+                </MudChip>
+                <MudChip T="string" Color="Color.Warning" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.PendingActions">
+                    @_lotes.Sum(l => l.Planillas.Count(p => !p.IsAssigned)) sin asignar
+                </MudChip>
+            </div>
+        </div>
+
         @foreach (var lote in _lotes)
         {
             <MudExpansionPanel Class="mb-2">

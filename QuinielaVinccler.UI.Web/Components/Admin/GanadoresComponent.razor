@@ -1,0 +1,193 @@
+@namespace QuinielaVinccler.UI.Web.Components.Admin
+@using QuinielaVinccler.UI.Web.Services
+
+<MudContainer Class="pa-4" MaxWidth="MaxWidth.Large">
+
+    <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
+        <MudText Typo="Typo.h6">Ganadores y reparto de premios</MudText>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="Recargar"
+                   Disabled="_cargando">
+            Recalcular
+        </MudButton>
+    </div>
+
+    @* ── Configuración del monto recaudado ── *@
+    <MudPaper Elevation="1" Class="pa-4 mb-4 rounded">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:600;" Class="mb-2">
+            Monto recaudado
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Total recolectado por la venta de planillas. Sobre este monto se calculan
+            los porcentajes adicionales de los premios.
+        </MudText>
+        <div class="d-flex align-center gap-2 flex-wrap">
+            <MudNumericField T="decimal" @bind-Value="_montoInput"
+                             Label="Monto en USD"
+                             Variant="Variant.Outlined"
+                             Disabled="_guardandoMonto"
+                             Adornment="Adornment.Start"
+                             AdornmentText="$"
+                             Min="0" Style="max-width:200px;" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="GuardarMonto"
+                       Disabled="_guardandoMonto"
+                       StartIcon="@Icons.Material.Filled.Save">
+                @if (_guardandoMonto)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Guardando...</span>
+                }
+                else
+                {
+                    <span>Guardar y recalcular</span>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else if (_resultado is null)
+    {
+        <MudAlert Severity="Severity.Info">Sin datos.</MudAlert>
+    }
+    else
+    {
+        @* ── Tarjetas de premios calculados ── *@
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3" Outlined="true"
+                          Style="border-left:4px solid #FFD700;">
+                    <MudText Typo="Typo.subtitle2">🥇 1er Premio</MudText>
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">
+                        @_resultado.Premios.Premio1ro.ToString("C0", _cultura)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        $2,000 + 50% de @_resultado.Premios.MontoRecaudado.ToString("C0", _cultura)
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3" Outlined="true"
+                          Style="border-left:4px solid #C0C0C0;">
+                    <MudText Typo="Typo.subtitle2">🥈 2do Premio</MudText>
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">
+                        @_resultado.Premios.Premio2do.ToString("C0", _cultura)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        $1,000 + 30% de @_resultado.Premios.MontoRecaudado.ToString("C0", _cultura)
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3" Outlined="true"
+                          Style="border-left:4px solid #CD7F32;">
+                    <MudText Typo="Typo.subtitle2">🥉 3er Premio</MudText>
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">
+                        @_resultado.Premios.Premio3ro.ToString("C0", _cultura)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        $500 + 20% de @_resultado.Premios.MontoRecaudado.ToString("C0", _cultura)
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3" Outlined="true"
+                          Style="border-left:4px solid var(--mud-palette-error);">
+                    <MudText Typo="Typo.subtitle2">🙃 Menor puntaje</MudText>
+                    <MudText Typo="Typo.h6" Style="font-weight:700;">
+                        @_resultado.Premios.PremioMenor.ToString("C0", _cultura)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">$2,000 fijo</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        @* ── Tabla de ganadores ── *@
+        @if (_resultado.Ganadores.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">
+                Aún no hay planillas con puntaje para calcular ganadores.
+            </MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle1" Style="font-weight:600;" Class="mb-2">
+                Ganadores actuales
+            </MudText>
+
+            @if (HayEmpates)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    Hay empates. El monto del premio correspondiente se divide
+                    proporcionalmente entre los empatados.
+                </MudAlert>
+            }
+
+            <MudTable Items="_resultado.Ganadores" Dense="true" Hover="true" Elevation="2"
+                      T="GanadorDto">
+                <HeaderContent>
+                    <MudTh>Premio</MudTh>
+                    <MudTh>Pos.</MudTh>
+                    <MudTh>Planilla</MudTh>
+                    <MudTh>Usuario</MudTh>
+                    <MudTh Style="text-align:right">Puntaje</MudTh>
+                    <MudTh Style="text-align:right">Empatados</MudTh>
+                    <MudTh Style="text-align:right">Monto base</MudTh>
+                    <MudTh Style="text-align:right">A recibir</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@LabelTipo(context.Tipo)</MudTd>
+                    <MudTd>@context.Posicion</MudTd>
+                    <MudTd>@context.CodigoPlanilla</MudTd>
+                    <MudTd>@context.NombreUsuario</MudTd>
+                    <MudTd Style="text-align:right">@context.PuntajeTotal pts</MudTd>
+                    <MudTd Style="text-align:right">
+                        @if (context.CantidadEmpatados > 1)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">
+                                @context.CantidadEmpatados
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:right">
+                        @context.MontoBase.ToString("C0", _cultura)
+                    </MudTd>
+                    <MudTd Style="text-align:right">
+                        <strong style="color:var(--mud-palette-success)">
+                            @context.MontoGanado.ToString("C0", _cultura)
+                        </strong>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <MudPaper Class="pa-3 mt-3" Outlined="true">
+                <div class="d-flex justify-space-between">
+                    <MudText Typo="Typo.subtitle2">Total a repartir:</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;">
+                        @_resultado.Ganadores.Sum(g => g.MontoGanado).ToString("C0", _cultura)
+                    </MudText>
+                </div>
+            </MudPaper>
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(_mensaje))
+    {
+        <MudAlert Severity="@_mensajeSeveridad" Dense="true" Class="mt-3"
+                  ShowCloseIcon="true" CloseIconClicked='() => _mensaje = ""'>
+            @_mensaje
+        </MudAlert>
+    }
+
+</MudContainer>

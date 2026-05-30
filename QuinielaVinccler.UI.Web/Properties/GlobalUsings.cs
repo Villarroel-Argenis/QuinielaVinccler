@@ -19,10 +19,12 @@ global using QuinielaVinccler.UI.Web.Endpoints;
 global using QuinielaVinccler.UI.Web.Services;
 global using System.Collections.Concurrent;
 global using System.Diagnostics;
+global using System.Globalization;
 global using System.Net.Mail;
 global using System.Security.Claims;
 global using System.Security.Cryptography;
 global using System.Text;
+
 
 
 

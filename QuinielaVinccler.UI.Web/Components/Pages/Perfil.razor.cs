@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
-
 namespace QuinielaVinccler.UI.Web.Components.Pages;
 
 public partial class Perfil : ComponentBase

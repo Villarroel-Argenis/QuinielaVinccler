@@ -1,11 +1,4 @@
 // Components/Pages/Ranking.razor.cs
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
-using MudBlazor;
-using QuinielaVinccler.UI.Web.Components.Shared;
-using QuinielaVinccler.UI.Web.Services;
-using System.Security.Claims;
-
 namespace QuinielaVinccler.UI.Web.Components.Pages;
 
 public partial class Ranking : ComponentBase

@@ -1,0 +1,174 @@
+@namespace QuinielaVinccler.UI.Web.Components.Admin
+
+<MudContainer Class="pa-4" MaxWidth="MaxWidth.Large">
+
+    <MudText Typo="Typo.h6" Class="mb-3">Mantenimiento de usuarios</MudText>
+
+    @* ── Filtros ── *@
+    <MudGrid Class="mb-3">
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_termino"
+                          Label="Buscar por email, nombre o cédula"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          OnKeyDown="HandleKeyDownBuscar"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnAdornmentClick="Buscar"
+                          AdornmentColor="Color.Primary" />
+        </MudItem>
+        <MudItem xs="12" sm="6" Class="d-flex align-center">
+            <MudCheckBox T="bool" Value="_incluirAdmins" ValueChanged="ToggleIncluirAdmins"
+                         Color="Color.Primary" Label="Incluir administradores" />
+        </MudItem>
+    </MudGrid>
+
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else if (_usuarios.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No se encontraron usuarios.</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+            @_usuarios.Count usuario@(_usuarios.Count == 1 ? "" : "s")
+        </MudText>
+
+        <MudTable Items="_paginados" Hover="true" Dense="true" Elevation="2" T="UserAdminDto">
+            <HeaderContent>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Cédula</MudTh>
+                <MudTh>Teléfono</MudTh>
+                <MudTh>Rol</MudTh>
+                <MudTh Style="text-align:center">Planillas</MudTh>
+                <MudTh Style="text-align:center">Estado</MudTh>
+                <MudTh Style="text-align:right">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.FullName</MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>@context.CI</MudTd>
+                <MudTd>@context.Telefono</MudTd>
+                <MudTd>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(context.Role == "Admin" ? Color.Primary : Color.Default)">
+                        @context.Role
+                    </MudChip>
+                </MudTd>
+                <MudTd Style="text-align:center">@context.CantidadPlanillas</MudTd>
+                <MudTd Style="text-align:center">
+                    @if (context.IsBlocked)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                 Icon="@Icons.Material.Filled.Block">Bloqueado</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                                 Icon="@Icons.Material.Filled.CheckCircle">Activo</MudChip>
+                    }
+                </MudTd>
+                <MudTd Style="text-align:right">
+                    <MudTooltip Text="@(context.Role == "Admin" ? "No se puede bloquear a un admin" : (context.IsBlocked ? "Desbloquear" : "Bloquear"))">
+                        <MudIconButton Icon="@(context.IsBlocked ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Lock)"
+                                       Color="@(context.IsBlocked ? Color.Success : Color.Warning)"
+                                       Size="Size.Small"
+                                       Disabled="@(context.Role == "Admin")"
+                                       OnClick="() => ToggleBloqueo(context)" />
+                    </MudTooltip>
+                    <MudTooltip Text="Resetear contraseña">
+                        <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
+                                       Color="Color.Info"
+                                       Size="Size.Small"
+                                       OnClick="() => AbrirResetPassword(context)" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        @if (_usuarios.Count > _pageSize)
+        {
+            <div class="d-flex justify-center mt-4">
+                <MudPagination Color="Color.Primary"
+                               Count="@TotalPaginas"
+                               Selected="_pagina"
+                               SelectedChanged="CambiarPagina"
+                               ShowFirstButton="true" ShowLastButton="true" />
+            </div>
+        }
+    }
+
+</MudContainer>
+
+@* ── Dialog resetear contraseña ── *@
+<MudDialog @bind-Visible="_showResetPassword">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Color="Color.Warning" />
+            <MudText Typo="Typo.h6">Resetear contraseña</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_passwordTemporal is null)
+        {
+            <MudText Class="mb-3">
+                ¿Resetear la contraseña de <strong>@_userSeleccionado?.FullName</strong>
+                (@_userSeleccionado?.Email)?
+            </MudText>
+            <MudAlert Severity="Severity.Warning" Dense="true">
+                Se generará una contraseña temporal que deberás compartirle al usuario.
+                Esta acción no se puede deshacer.
+            </MudAlert>
+            @if (_errorReset is not null)
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true">@_errorReset</MudAlert>
+            }
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-3">
+                Contraseña reseteada exitosamente.
+            </MudAlert>
+            <MudText Typo="Typo.body2" Class="mb-2">Contraseña temporal:</MudText>
+            <MudPaper Elevation="0" Class="pa-3" Outlined="true">
+                <MudText Typo="Typo.h6" Style="font-family:monospace;letter-spacing:2px;">
+                    @_passwordTemporal
+                </MudText>
+            </MudPaper>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                Comparte esta contraseña al usuario por un canal seguro. Recomiéndale cambiarla
+                desde su perfil después de iniciar sesión.
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_passwordTemporal is null)
+        {
+            <MudButton OnClick="CerrarResetPassword" Disabled="_reseteando">Cancelar</MudButton>
+            <MudButton Color="Color.Warning" Variant="Variant.Filled"
+                       OnClick="EjecutarResetPassword" Disabled="_reseteando">
+                @if (_reseteando)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    <span>Reseteando...</span>
+                }
+                else
+                {
+                    <span>Sí, resetear</span>
+                }
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CerrarResetPassword">
+                Cerrar
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>

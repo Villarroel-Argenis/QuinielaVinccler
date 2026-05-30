@@ -1,0 +1,80 @@
+@page "/perfil"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "Registrado")]
+
+<PageTitle>Mi perfil – Quiniela FIFA 2026</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+
+    <div class="d-flex align-center gap-2 mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Size="Size.Large" />
+        <MudText Typo="Typo.h5" Style="font-weight:700;">Mi perfil</MudText>
+    </div>
+
+    <MudPaper Elevation="2" Class="pa-4 mb-4 rounded-lg">
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">
+            Cambiar contraseña
+        </MudText>
+
+        <MudTextField @bind-Value="_passwordActual"
+                      Label="Contraseña actual"
+                      Variant="Variant.Outlined"
+                      InputType="@(_verActual ? InputType.Text : InputType.Password)"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_verActual ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _verActual = !_verActual"
+                      Class="mb-3"
+                      Disabled="_guardando" />
+
+        <MudTextField @bind-Value="_passwordNueva"
+                      Label="Nueva contraseña"
+                      Variant="Variant.Outlined"
+                      InputType="@(_verNueva ? InputType.Text : InputType.Password)"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@(_verNueva ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                      OnAdornmentClick="() => _verNueva = !_verNueva"
+                      HelperText="Mínimo 6 caracteres"
+                      Class="mb-3"
+                      Disabled="_guardando" />
+
+        <MudTextField @bind-Value="_passwordConfirma"
+                      Label="Confirmar nueva contraseña"
+                      Variant="Variant.Outlined"
+                      InputType="@(_verNueva ? InputType.Text : InputType.Password)"
+                      Class="mb-3"
+                      Disabled="_guardando" />
+
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="CambiarPassword"
+                   Disabled="_guardando || !PuedeGuardar"
+                   StartIcon="@Icons.Material.Filled.Save"
+                   FullWidth="true">
+            @if (_guardando)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Guardando...</span>
+            }
+            else
+            {
+                <span>Cambiar contraseña</span>
+            }
+        </MudButton>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3" Dense="true"
+                      ShowCloseIcon="true" CloseIconClicked="() => _error = null">
+                @_error
+            </MudAlert>
+        }
+
+        @if (_exito)
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-3" Dense="true">
+                Contraseña cambiada correctamente.
+            </MudAlert>
+        }
+    </MudPaper>
+
+</MudContainer>

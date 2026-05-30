@@ -1,4 +1,4 @@
-﻿namespace QuinielaVinccler.UI.Web.Data.Models;
+namespace QuinielaVinccler.UI.Web.Data.Models;
 
 public class AppUser
 {
@@ -10,4 +10,9 @@ public class AppUser
     public string Telefono { get; set; } = string.Empty;
     public string Role { get; set; } = "Common";
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// Si está en true, el usuario no puede iniciar sesión.
+    /// </summary>
+    public bool IsBlocked { get; set; } = false;
 }

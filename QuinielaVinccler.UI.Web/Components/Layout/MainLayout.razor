@@ -1,6 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using QuinielaVinccler.UI.Web.Components.Layout
+@using QuinielaVinccler.UI.Web.Components.Shared
+@inject IDialogService DialogSvc
 
 <MudThemeProvider Theme="AppTheme.Theme"
                   @bind-IsDarkMode="_isDarkMode"/>
@@ -25,6 +27,16 @@
         </MudHidden>
 
         <MudSpacer />
+
+        <AuthorizeView>
+            <Authorized>
+                <MudTooltip Text="Manual de uso">
+                    <MudIconButton Icon="@Icons.Material.Filled.Help"
+                                   Color="Color.Inherit"
+                                   OnClick="@(() => AbrirManual(context.User.IsInRole("Admin")))" />
+                </MudTooltip>
+            </Authorized>
+        </AuthorizeView>
 
         <MudIconButton Icon="@DarkLightModeButtonIcon"
                        Color="Color.Inherit"
@@ -56,3 +68,23 @@
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+    private async Task AbrirManual(bool esAdmin)
+    {
+        var parametros = new DialogParameters<ManualDialog>
+        {
+            { x => x.MostrarAdmin, esAdmin }
+        };
+
+        var opciones = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogSvc.ShowAsync<ManualDialog>("Manual de uso", parametros, opciones);
+    }
+}

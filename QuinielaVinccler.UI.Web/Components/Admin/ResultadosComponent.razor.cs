@@ -1,7 +1,5 @@
 namespace QuinielaVinccler.UI.Web.Components.Admin;
 
-using Color = MudBlazor.Color;
-
 public partial class ResultadosComponent : ComponentBase
 {
     [Inject] private IPuntuacionService PuntuacionSvc { get; set; } = null!;

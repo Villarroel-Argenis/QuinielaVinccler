@@ -1,4 +1,4 @@
-﻿namespace QuinielaVinccler.UI.Web.Components.Admin;
+namespace QuinielaVinccler.UI.Web.Components.Admin;
 
 public partial class LoteComponent
 {
@@ -9,16 +9,25 @@ public partial class LoteComponent
     private Lote? _seleccionado;
     private bool _showConfirmDelete = false;
     private string _error = "";
+    private bool _quinielaCerrada = false;
 
-    [Inject]private ILoteService LoteService { get; set; } = default!;
+    [Inject] private ILoteService LoteService { get; set; } = default!;
+    [Inject] private IConfiguracionService ConfigSvc { get; set; } = default!;
 
-    protected override async  Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         _lotes = await LoteService.GetAsync();
+        _quinielaCerrada = await ConfigSvc.QuinielaCerradaAsync();
     }
 
     private async Task GenerarPlanillas()
     {
+        if (_quinielaCerrada)
+        {
+            _error = "La quiniela está cerrada. No se pueden generar más planillas.";
+            return;
+        }
+
         _generando = true;
         _error = "";
         try
@@ -45,6 +54,13 @@ public partial class LoteComponent
     private async Task Eliminar()
     {
         if (_seleccionado is null) return;
+
+        if (_quinielaCerrada)
+        {
+            _error = "La quiniela está cerrada. No se pueden eliminar lotes.";
+            return;
+        }
+
         try
         {
             var (exito, mensaje) = await LoteService.EliminarAsync(_seleccionado.Id);
@@ -66,5 +82,4 @@ public partial class LoteComponent
             _error = $"Error al eliminar: {ex.Message}";
         }
     }
-
 }

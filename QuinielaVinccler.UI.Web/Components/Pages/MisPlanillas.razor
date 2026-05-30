@@ -12,8 +12,18 @@
         <MudText Typo="Typo.h5" Style="font-weight:700;">Mis Planillas</MudText>
     </div>
 
-    @* ── Vincular planilla ───────────────────────────────────────────────── *@
-    @if (!_quinielaCerrada)
+    @* ── Vincular planilla / Aviso de cierre ─────────────────────────────── *@
+    @if (_quinielaCerrada)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-6" Dense="true"
+                  Icon="@Icons.Material.Filled.Lock">
+            <MudText Typo="Typo.subtitle2">La quiniela está cerrada</MudText>
+            <MudText Typo="Typo.body2">
+                No se pueden vincular más planillas. Solo puedes consultar las que ya tienes vinculadas.
+            </MudText>
+        </MudAlert>
+    }
+    else
     {
         <MudPaper Elevation="2" Class="pa-4 mb-6 rounded-lg">
             <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;">

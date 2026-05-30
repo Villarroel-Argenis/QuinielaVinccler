@@ -1,9 +1,12 @@
-﻿namespace QuinielaVinccler.UI.Web.Services;
+namespace QuinielaVinccler.UI.Web.Services;
 
-public class LoteService(AppDbContext db) : ILoteService
+public class LoteService(AppDbContext db, IConfiguracionService configuracion) : ILoteService
 {
     public async Task<Lote> CreateAsync(int cantidad)
     {
+        if (await configuracion.QuinielaCerradaAsync())
+            throw new InvalidOperationException("La quiniela está cerrada. No se pueden generar más planillas.");
+
         var lote = new Lote
         {
             Codigo = $"L-{Random.Shared.Next(10000000, 99999999)}",
@@ -52,6 +55,9 @@ public class LoteService(AppDbContext db) : ILoteService
 
     public async Task<(bool Exito, string Mensaje)> EliminarAsync(int loteId)
     {
+        if (await configuracion.QuinielaCerradaAsync())
+            return (false, "La quiniela está cerrada. No se pueden eliminar lotes.");
+
         var lote = await db.Lotes
             .Include(l => l.Planillas)
             .FirstOrDefaultAsync(l => l.Id == loteId);

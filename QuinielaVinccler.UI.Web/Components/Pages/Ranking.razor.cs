@@ -1,4 +1,11 @@
 // Components/Pages/Ranking.razor.cs
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using MudBlazor;
+using QuinielaVinccler.UI.Web.Components.Shared;
+using QuinielaVinccler.UI.Web.Services;
+using System.Security.Claims;
+
 namespace QuinielaVinccler.UI.Web.Components.Pages;
 
 public partial class Ranking : ComponentBase
@@ -9,9 +16,23 @@ public partial class Ranking : ComponentBase
 
     private bool _cargando = true;
     private List<RankingItemDto> _ranking = [];
+    private List<RankingItemDto> _filtradas = [];
+    private List<RankingItemDto> _paginadas = [];
+
     private int _total;
     private int _ultimaPosicion;
     private int _userId;
+
+    private bool _soloMias;
+    private int _pageSize = 20;
+    private int _paginaActual = 1;
+
+    private const int UmbralOcultarPaginador = 19;
+
+    private int TotalPaginas => _filtradas.Count == 0 ? 1 :
+        (int)Math.Ceiling(_filtradas.Count / (double)_pageSize);
+
+    private bool MostrarPaginador => !_soloMias && _filtradas.Count > UmbralOcultarPaginador;
 
     protected override async Task OnInitializedAsync()
     {
@@ -22,7 +43,72 @@ public partial class Ranking : ComponentBase
         _ranking = await PlanillaSvc.GetRankingAsync(_userId);
         _total = _ranking.Count;
         _ultimaPosicion = _ranking.Count > 0 ? _ranking[^1].Posicion : 0;
+
+        // Saltar a la página donde está la mejor planilla del usuario
+        AplicarFiltroYPagina(saltarAUsuario: true);
+
         _cargando = false;
+    }
+
+    private void ToggleSoloMias(bool valor)
+    {
+        _soloMias = valor;
+        _paginaActual = 1;
+        AplicarFiltroYPagina(saltarAUsuario: false);
+    }
+
+    private void CambiarPageSize(int nuevo)
+    {
+        _pageSize = nuevo;
+        AplicarFiltroYPagina(saltarAUsuario: true);
+    }
+
+    private void CambiarPagina(int nueva)
+    {
+        _paginaActual = nueva;
+        AplicarPaginacion();
+        StateHasChanged();
+    }
+
+    private void AplicarFiltroYPagina(bool saltarAUsuario)
+    {
+        _filtradas = _soloMias
+            ? _ranking.Where(r => r.EsUsuarioActual).ToList()
+            : _ranking;
+
+        if (saltarAUsuario && !_soloMias)
+        {
+            // Buscar la mejor posición del usuario (menor número = mejor)
+            var mejor = _ranking.Where(r => r.EsUsuarioActual)
+                                .OrderBy(r => r.Posicion)
+                                .FirstOrDefault();
+            if (mejor is not null)
+            {
+                int indice = _ranking.IndexOf(mejor);
+                _paginaActual = (indice / _pageSize) + 1;
+            }
+            else
+            {
+                _paginaActual = 1;
+            }
+        }
+
+        AplicarPaginacion();
+        StateHasChanged();
+    }
+
+    private void AplicarPaginacion()
+    {
+        if (_soloMias)
+        {
+            _paginadas = _filtradas;
+            return;
+        }
+
+        _paginadas = _filtradas
+            .Skip((_paginaActual - 1) * _pageSize)
+            .Take(_pageSize)
+            .ToList();
     }
 
     private string FilaClass(RankingItemDto item, int _)
@@ -33,7 +119,7 @@ public partial class Ranking : ComponentBase
         var parametros = new DialogParameters<PlanillaModal>
         {
             { x => x.PlanillaId, item.PlanillaId },
-            { x => x.UserId,  item.UserId },
+            { x => x.UserId, item.UserId  },
             { x => x.CodigoPlanilla, item.CodigoPlanilla }
         };
 

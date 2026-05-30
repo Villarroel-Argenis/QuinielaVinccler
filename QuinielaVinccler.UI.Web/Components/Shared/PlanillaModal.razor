@@ -18,6 +18,30 @@
         }
         else
         {
+            @* ── Indicadores ── *@
+            <div class="d-flex gap-4 flex-wrap mb-4">
+                <div style="min-width:180px; flex:1;">
+                    <div class="d-flex justify-space-between mb-1">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Predicciones</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @CamposPredichos / @TotalCampos (@PorcentajePrediccion%)
+                        </MudText>
+                    </div>
+                    <MudProgressLinear Value="@((double)PorcentajePrediccion)" Max="100"
+                                       Color="Color.Info" Rounded="true" Size="Size.Small" />
+                </div>
+                <div style="min-width:180px; flex:1;">
+                    <div class="d-flex justify-space-between mb-1">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Con resultado</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @TotalConResultado / @TotalCampos (@PorcentajeResultados%)
+                        </MudText>
+                    </div>
+                    <MudProgressLinear Value="@((double)PorcentajeResultados)" Max="100"
+                                       Color="Color.Success" Rounded="true" Size="Size.Small" />
+                </div>
+            </div>
+
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
 
                 @* ── FASE DE GRUPOS ── *@
@@ -80,7 +104,6 @@
                                                          Color="@ResultadoRealColor(ResultadoPartido.Equis, pg.ResultadoPredicho, rGrupoReal)">X</MudChip>
                                                 <MudChip T="string" Size="Size.Small"
                                                          Color="@ResultadoRealColor(ResultadoPartido.Dos, pg.ResultadoPredicho, rGrupoReal)">2</MudChip>
-                                                @* ── Puntos ── *@
                                                 @if (pg.PuntosObtenidos.HasValue)
                                                 {
                                                     <MudText Typo="Typo.caption"
@@ -93,11 +116,11 @@
                                             else
                                             {
                                                 <MudChip T="string" Size="Size.Small"
-                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Uno ? Color.Primary : Color.Default)">1</MudChip>
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Uno ? Color.Info : Color.Default)">1</MudChip>
                                                 <MudChip T="string" Size="Size.Small"
-                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Equis ? Color.Primary : Color.Default)">X</MudChip>
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Equis ? Color.Info : Color.Default)">X</MudChip>
                                                 <MudChip T="string" Size="Size.Small"
-                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Dos ? Color.Primary : Color.Default)">2</MudChip>
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Dos ? Color.Info : Color.Default)">2</MudChip>
                                             }
                                         </div>
                                     }
@@ -121,12 +144,12 @@
                         .Where(x => x.Partido.Fase == Fase.RoundOf32)
                         .OrderBy(x => x.Partido.NumeroPartido))
                     {
-                        var localEquipo        = pk.EquipoLocalPredichado;
-                        var visitEquipo        = pk.EquipoVisitantePredichado;
-                        var tieneLocal         = localEquipo is not null;
-                        var tieneVisit         = visitEquipo is not null;
-                        var slotsR32           = _resultadosR32.GetValueOrDefault(pk.PartidoId);
-                        var tieneResultadoReal  = slotsR32.Local.HasValue || slotsR32.Visitante.HasValue;
+                        var localEquipo       = pk.EquipoLocalPredichado;
+                        var visitEquipo       = pk.EquipoVisitantePredichado;
+                        var tieneLocal        = localEquipo is not null;
+                        var tieneVisit        = visitEquipo is not null;
+                        var slotsR32          = _resultadosR32.GetValueOrDefault(pk.PartidoId);
+                        var tieneResultadoReal = slotsR32.Local.HasValue || slotsR32.Visitante.HasValue;
 
                         <MudPaper Elevation="1" Class="mb-2 rounded">
                             <div class="d-flex align-center justify-space-between px-3 pt-2 pb-0">
@@ -198,12 +221,12 @@
                         .Where(x => x.Partido.Fase == Fase.RoundOf16)
                         .OrderBy(x => x.Partido.NumeroPartido))
                     {
-                        var localEquipo        = pk.EquipoLocalPredichado;
-                        var visitEquipo        = pk.EquipoVisitantePredichado;
-                        var tieneLocal         = localEquipo is not null;
-                        var tieneVisit         = visitEquipo is not null;
-                        var slotsKo            = _resultadosKoSlots.GetValueOrDefault(pk.PartidoId);
-                        var tieneResultadoReal  = slotsKo.Local.HasValue || slotsKo.Visitante.HasValue;
+                        var localEquipo       = pk.EquipoLocalPredichado;
+                        var visitEquipo       = pk.EquipoVisitantePredichado;
+                        var tieneLocal        = localEquipo is not null;
+                        var tieneVisit        = visitEquipo is not null;
+                        var slotsKo           = _resultadosKoSlots.GetValueOrDefault(pk.PartidoId);
+                        var tieneResultadoReal = slotsKo.Local.HasValue || slotsKo.Visitante.HasValue;
 
                         <MudPaper Elevation="1" Class="mb-2 rounded">
                             <div class="d-flex align-center justify-space-between px-3 pt-2 pb-0">

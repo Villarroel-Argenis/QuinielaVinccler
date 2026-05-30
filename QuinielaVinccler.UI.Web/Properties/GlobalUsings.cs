@@ -21,7 +21,8 @@ global using System.Collections.Concurrent;
 global using System.Diagnostics;
 global using System.Net.Mail;
 global using System.Security.Claims;
-
+global using System.Security.Cryptography;
+global using System.Text;
 
 
 

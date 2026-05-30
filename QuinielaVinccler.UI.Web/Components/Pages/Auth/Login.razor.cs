@@ -57,11 +57,11 @@ public partial class Login : ComponentBase
 
         try
         {
-            var user = await AuthSvc.LoginAsync(_email, _password);
+            var (user, error) = await AuthSvc.LoginAsync(_email, _password);
 
             if (user is null)
             {
-                _error = "Correo o contraseña incorrectos.";
+                _error = error ?? "Correo o contraseña incorrectos.";
                 return;
             }
 

@@ -1,0 +1,105 @@
+@namespace QuinielaVinccler.UI.Web.Components.Admin
+
+<MudContainer Class="pa-4" MaxWidth="MaxWidth.Medium">
+
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+        </div>
+    }
+    else
+    {
+        @* ── Cartel de estado consolidado ── *@
+        {
+            var estado = GetEstadoConsolidado();
+
+            <MudAlert Severity="@estado.Severidad" Class="mb-4" Icon="@estado.Icono">
+                <MudText Typo="Typo.subtitle2" Style="font-weight:700;">@estado.Titulo</MudText>
+                <MudText Typo="Typo.body2">@estado.Detalle</MudText>
+            </MudAlert>
+        }
+        @* ── Toggle manual ── *@
+        <MudPaper Elevation="1" Class="pa-4 mb-4 rounded">
+            <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:600;">
+                        Cierre manual
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Cierra la quiniela inmediatamente, sin importar la fecha programada.
+                    </MudText>
+                </div>
+                <MudSwitch T="bool" Value="_cierreManual" ValueChanged="ToggleCierreManual"
+                           Color="Color.Error"
+                           Disabled="_guardando"
+                           Label="@(_cierreManual ? "Cerrada" : "Abierta")" />
+            </div>
+        </MudPaper>
+
+        @* ── Fecha de cierre programado ── *@
+        <MudPaper Elevation="1" Class="pa-4 mb-4 rounded">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:600;" Class="mb-2">
+                Fecha de cierre programado
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Después de esta fecha, la quiniela se cerrará automáticamente.
+                Las fechas se interpretan en zona horaria local y se guardan en UTC.
+            </MudText>
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Fecha de cierre"
+                                   Date="_fechaCierreLocal"
+                                   DateChanged="OnFechaChanged"
+                                   Variant="Variant.Outlined"
+                                   Disabled="_guardando"
+                                   Clearable="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTimePicker Label="Hora de cierre"
+                                   Time="_horaCierre"
+                                   TimeChanged="OnHoraChanged"
+                                   Variant="Variant.Outlined"
+                                   Disabled="_guardando || _fechaCierreLocal is null" />
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex gap-2 mt-3">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="GuardarFecha"
+                           Disabled="_guardando || _fechaCierreLocal is null"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @if (_guardando)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Guardando...</span>
+                    }
+                    else
+                    {
+                        <span>Guardar fecha</span>
+                    }
+                </MudButton>
+
+                @if (_fechaCierreLocal is not null)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                               OnClick="LimpiarFecha"
+                               Disabled="_guardando"
+                               StartIcon="@Icons.Material.Filled.Clear">
+                        Quitar fecha
+                    </MudButton>
+                }
+            </div>
+        </MudPaper>
+
+        @if (!string.IsNullOrEmpty(_mensaje))
+        {
+            <MudAlert Severity="@_mensajeSeveridad" Dense="true" Class="mb-2"
+                      ShowCloseIcon="true" CloseIconClicked='() => _mensaje = ""'>
+                @_mensaje
+            </MudAlert>
+        }
+    }
+
+</MudContainer>

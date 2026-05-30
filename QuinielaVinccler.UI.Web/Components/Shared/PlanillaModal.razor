@@ -1,0 +1,527 @@
+@* Components/Shared/PlanillaModal.razor *@
+@using QuinielaVinccler.UI.Web.Data.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Planilla @CodigoPlanilla</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_cargando)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" />
+            </div>
+        }
+        else if (_planilla is null)
+        {
+            <MudAlert Severity="Severity.Warning">No se pudo cargar la planilla.</MudAlert>
+        }
+        else
+        {
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+
+                @* ── FASE DE GRUPOS ── *@
+                <MudTabPanel Text="Fase de Grupos">
+                    <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">✓ Acertaste</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">← Resultado real</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">✗ Tu predicción (falló)</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Sin resultado aún</MudChip>
+                    </div>
+                    @foreach (var grupo in _planilla!.PrediccionesGrupo
+                        .GroupBy(p => p.Partido.EquipoLocal!.Grupo)
+                        .OrderBy(g => g.Key))
+                    {
+                        <div class="d-flex align-center px-1 pt-4 pb-1 mb-1">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight:700;">Grupo @grupo.Key</MudText>
+                        </div>
+                        <MudPaper Elevation="1" Class="mb-3 rounded">
+                            @foreach (var pg in grupo.OrderBy(x => x.Partido.NumeroPartido))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 pa-3">
+                                    Partido #@pg.Partido.NumeroPartido
+                                    <span style="opacity:0.6; margin-left:8px;">
+                                        @pg.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+                                    </span>
+                                </MudText>
+                                <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
+                                    <div class="grupo-fila__equipos">
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            <img src="@pg.Partido.EquipoLocal!.FlagUrl" style="height:16px; flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                @pg.Partido.EquipoLocal.Nombre
+                                            </MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                 Style="flex-shrink:0; padding:0 4px;">vs</MudText>
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            <img src="@pg.Partido.EquipoVisitante!.FlagUrl" style="height:16px; flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                @pg.Partido.EquipoVisitante.Nombre
+                                            </MudText>
+                                        </div>
+                                    </div>
+                                    @if (pg.ResultadoPredicho is null)
+                                    {
+                                        <MudAlert Severity="Severity.Info" Dense="true">Sin predicción</MudAlert>
+                                    }
+                                    else
+                                    {
+                                        var rGrupoReal = _resultadosGrupo.GetValueOrDefault(pg.PartidoId);
+                                        bool grupoTieneReal = rGrupoReal.HasValue;
+                                        <div class="grupo-fila__botones">
+                                            @if (grupoTieneReal)
+                                            {
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@ResultadoRealColor(ResultadoPartido.Uno, pg.ResultadoPredicho, rGrupoReal)">1</MudChip>
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@ResultadoRealColor(ResultadoPartido.Equis, pg.ResultadoPredicho, rGrupoReal)">X</MudChip>
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@ResultadoRealColor(ResultadoPartido.Dos, pg.ResultadoPredicho, rGrupoReal)">2</MudChip>
+                                                @* ── Puntos ── *@
+                                                @if (pg.PuntosObtenidos.HasValue)
+                                                {
+                                                    <MudText Typo="Typo.caption"
+                                                             Color="@(pg.PuntosObtenidos > 0 ? Color.Success : Color.Error)"
+                                                             Style="font-weight:600;white-space:nowrap;">
+                                                        @(pg.PuntosObtenidos > 0 ? $"+{pg.PuntosObtenidos}" : "0") pts
+                                                    </MudText>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Uno ? Color.Default : Color.Default)">1</MudChip>
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Equis ? Color.Default : Color.Default)">X</MudChip>
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@(pg.ResultadoPredicho == ResultadoPartido.Dos ? Color.Default : Color.Default)">2</MudChip>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── DIECISEISAVOS ── *@
+                <MudTabPanel Text="Dieciseisavos">
+                    <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">✓ Acertaste</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">✗ Fallaste</MudChip>
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Pasa el cursor sobre la ✗ para ver el equipo real
+                        </MudText>
+                    </div>
+                    @foreach (var pk in _planilla.PrediccionesKnockout
+                        .Where(x => x.Partido.Fase == Fase.RoundOf32)
+                        .OrderBy(x => x.Partido.NumeroPartido))
+                    {
+                        var localEquipo        = pk.EquipoLocalPredichado;
+                        var visitEquipo        = pk.EquipoVisitantePredichado;
+                        var tieneLocal         = localEquipo is not null;
+                        var tieneVisit         = visitEquipo is not null;
+                        var slotsR32           = _resultadosR32.GetValueOrDefault(pk.PartidoId);
+                        var tieneResultadoReal  = slotsR32.Local.HasValue || slotsR32.Visitante.HasValue;
+
+                        <MudPaper Elevation="1" Class="mb-2 rounded">
+                            <div class="d-flex align-center justify-space-between px-3 pt-2 pb-0">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Partido #@pk.Partido.NumeroPartido
+                                </MudText>
+                                @if (pk.PuntosObtenidos.HasValue)
+                                {
+                                    <MudText Typo="Typo.caption"
+                                             Color="@(pk.PuntosObtenidos > 0 ? Color.Success : Color.Error)"
+                                             Style="font-weight:600;">
+                                        @(pk.PuntosObtenidos > 0 ? $"+{pk.PuntosObtenidos}" : "0") pts
+                                    </MudText>
+                                }
+                            </div>
+                            <div class="grupo-fila px-3">
+                                <div class="grupo-fila__equipos">
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        @if (tieneLocal)
+                                        {
+                                            <img src="@localEquipo!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @localEquipo.Nombre
+                                            </MudText>
+                                            @IconoSlot(pk.EquipoLocalPredichoId, slotsR32, true, tieneResultadoReal)
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotLocal</MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                        }
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="flex-shrink:0;padding:0 4px;">vs</MudText>
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        @if (tieneVisit)
+                                        {
+                                            <img src="@visitEquipo!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @visitEquipo.Nombre
+                                            </MudText>
+                                            @IconoSlot(pk.EquipoVisitantePredichoId, slotsR32, false, tieneResultadoReal)
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotVisitante</MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── OCTAVOS ── *@
+                <MudTabPanel Text="Octavos">
+                    <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">✓ Acertaste</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">✗ Fallaste</MudChip>
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Pasa el cursor sobre la ✗ para ver el equipo real
+                        </MudText>
+                    </div>
+                    @foreach (var pk in _planilla.PrediccionesKnockout
+                        .Where(x => x.Partido.Fase == Fase.RoundOf16)
+                        .OrderBy(x => x.Partido.NumeroPartido))
+                    {
+                        var localEquipo        = pk.EquipoLocalPredichado;
+                        var visitEquipo        = pk.EquipoVisitantePredichado;
+                        var tieneLocal         = localEquipo is not null;
+                        var tieneVisit         = visitEquipo is not null;
+                        var slotsKo            = _resultadosKoSlots.GetValueOrDefault(pk.PartidoId);
+                        var tieneResultadoReal  = slotsKo.Local.HasValue || slotsKo.Visitante.HasValue;
+
+                        <MudPaper Elevation="1" Class="mb-2 rounded">
+                            <div class="d-flex align-center justify-space-between px-3 pt-2 pb-0">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Partido #@pk.Partido.NumeroPartido
+                                </MudText>
+                                @if (pk.PuntosObtenidos.HasValue)
+                                {
+                                    <MudText Typo="Typo.caption"
+                                             Color="@(pk.PuntosObtenidos > 0 ? Color.Success : Color.Error)"
+                                             Style="font-weight:600;">
+                                        @(pk.PuntosObtenidos > 0 ? $"+{pk.PuntosObtenidos}" : "0") pts
+                                    </MudText>
+                                }
+                            </div>
+                            <div class="grupo-fila px-3">
+                                <div class="grupo-fila__equipos">
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        @if (tieneLocal)
+                                        {
+                                            <img src="@localEquipo!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @localEquipo.Nombre
+                                            </MudText>
+                                            @IconoSlot(pk.EquipoLocalPredichoId, slotsKo, true, tieneResultadoReal)
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotLocal</MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                        }
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                             Style="flex-shrink:0;padding:0 4px;">vs</MudText>
+                                    <div class="d-flex align-center gap-1" style="min-width:0;">
+                                        @if (tieneVisit)
+                                        {
+                                            <img src="@visitEquipo!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @visitEquipo.Nombre
+                                            </MudText>
+                                            @IconoSlot(pk.EquipoVisitantePredichoId, slotsKo, false, tieneResultadoReal)
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotVisitante</MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── CUARTOS, SEMIS, 3/4, FINAL ── *@
+                @foreach (var (fase, label) in _fasesKo)
+                {
+                    <MudTabPanel Text="@label">
+                        <div class="d-flex align-center gap-3 mb-3 flex-wrap">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">✓ Acertaste</MudChip>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">✗ Fallaste</MudChip>
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Pasa el cursor sobre la ✗ para ver el equipo real
+                            </MudText>
+                        </div>
+                        @foreach (var pk in _planilla.PrediccionesKnockout
+                            .Where(x => x.Partido.Fase == fase)
+                            .OrderBy(x => x.Partido.NumeroPartido))
+                        {
+                            var localEquipo2        = pk.EquipoLocalPredichado;
+                            var visitEquipo2        = pk.EquipoVisitantePredichado;
+                            var tieneLocal2         = localEquipo2 is not null;
+                            var tieneVisit2         = visitEquipo2 is not null;
+                            var slotsKo2            = _resultadosKoSlots.GetValueOrDefault(pk.PartidoId);
+                            var tieneResultadoReal2  = slotsKo2.Local.HasValue || slotsKo2.Visitante.HasValue;
+
+                            <MudPaper Elevation="1" Class="mb-2 rounded">
+                                <div class="d-flex align-center justify-space-between px-3 pt-2 pb-0">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Partido #@pk.Partido.NumeroPartido
+                                    </MudText>
+                                    @if (pk.PuntosObtenidos.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption"
+                                                 Color="@(pk.PuntosObtenidos > 0 ? Color.Success : Color.Error)"
+                                                 Style="font-weight:600;">
+                                            @(pk.PuntosObtenidos > 0 ? $"+{pk.PuntosObtenidos}" : "0") pts
+                                        </MudText>
+                                    }
+                                </div>
+                                <div class="grupo-fila px-3">
+                                    <div class="grupo-fila__equipos">
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            @if (tieneLocal2)
+                                            {
+                                                <img src="@localEquipo2!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                                <MudText Typo="Typo.body2"
+                                                         Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                    @localEquipo2.Nombre
+                                                </MudText>
+                                                @IconoSlot(pk.EquipoLocalPredichoId, slotsKo2, true, tieneResultadoReal2)
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotLocal</MudText>
+                                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                 Style="flex-shrink:0;padding:0 4px;">vs</MudText>
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            @if (tieneVisit2)
+                                            {
+                                                <img src="@visitEquipo2!.FlagUrl" style="height:16px;flex-shrink:0;" />
+                                                <MudText Typo="Typo.body2"
+                                                         Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                    @visitEquipo2.Nombre
+                                                </MudText>
+                                                @IconoSlot(pk.EquipoVisitantePredichoId, slotsKo2, false, tieneResultadoReal2)
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@pk.Partido.SlotVisitante</MudText>
+                                                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Size="Size.Small" />
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudTabPanel>
+                }
+
+                @* ── POSICIONES FINALES ── *@
+                @if (_planilla.PrediccionFinal is not null)
+                {
+                    <MudTabPanel Text="Final">
+                        @{
+                            var pf = _planilla.PrediccionFinal;
+                            var rf = _resultadoFinal;
+                        }
+                        <MudSimpleTable Dense="true" Hover="true" Class="mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Predicción</th>
+                                    <th>Equipo</th>
+                                    <th>Pts</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @RenderFilaFinal("🏆 Campeón", pf.CampeonEquipoId, rf?.CampeonEquipoId, 300)
+                                @RenderFilaFinal("🥈 2° Lugar", pf.SegundoLugarEquipoId, rf?.SegundoLugarEquipoId, 200)
+                                @RenderFilaFinal("🥉 3° Lugar", pf.TercerLugarEquipoId, rf?.TercerLugarEquipoId, 100)
+                                @RenderFilaFinal("4° Lugar", pf.CuartoLugarEquipoId, rf?.CuartoLugarEquipoId, 50)
+                                @RenderFilaFinal("⚽ Más Goleador", pf.MasGoleadorEquipoId, rf?.MasGoleadorEquipoId, 100)
+                                @RenderFilaFinal("🔥 Más Goleado", pf.MasGoleadoEquipoId, rf?.MasGoleadoEquipoId, 100)
+                                @RenderFilaFinal("🛡️ Menos Goleado", pf.MenosGoleadoEquipoId, rf?.MenosGoleadoEquipoId, 100)
+                            </tbody>
+                        </MudSimpleTable>
+
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Marcadores exactos</MudText>
+                        <MudSimpleTable Dense="true" Hover="true">
+                            <thead><tr><th>Partido</th><th>Predicción</th><th>Pts</th><th></th></tr></thead>
+                            <tbody>
+                                @RenderFilaMarcador("Semifinal 1", pf.GolesLocalSemi1, pf.GolesVisitanteSemi1,
+                                    _marcadoresSemis.GetValueOrDefault("SF1"), pf.PuntosMarcadorSemi1)
+                                @RenderFilaMarcador("Semifinal 2", pf.GolesLocalSemi2, pf.GolesVisitanteSemi2,
+                                    _marcadoresSemis.GetValueOrDefault("SF2"), pf.PuntosMarcadorSemi2)
+                                @RenderFilaMarcador("Gran Final", pf.GolesLocalGranFinal, pf.GolesVisitanteGranFinal,
+                                    _marcadoresSemis.GetValueOrDefault("GF"), pf.PuntosMarcadorGranFinal)
+                            </tbody>
+                        </MudSimpleTable>
+
+                        @if (pf.PuntosPosicionesFinal.HasValue)
+                        {
+                            <MudDivider Class="my-3" />
+                            <div class="d-flex justify-end">
+                                <MudText Typo="Typo.subtitle2">
+                                    Total posiciones finales:
+                                    <strong style="color:var(--mud-palette-success)">
+                                        +@pf.PuntosPosicionesFinal pts
+                                    </strong>
+                                </MudText>
+                            </div>
+                        }
+                    </MudTabPanel>
+                }
+
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cerrar" Variant="Variant.Filled" Color="Color.Primary">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private RenderFragment IconoSlot(
+        int? predichoId,
+        (int? Local, int? Visitante) slots,
+        bool esLocal,
+        bool tieneReal) => __builder =>
+    {
+        if (!tieneReal)
+        {
+            __builder.OpenComponent<MudIcon>(0);
+            __builder.AddAttribute(1, "Icon", Icons.Material.Filled.HourglassEmpty);
+            __builder.AddAttribute(2, "Color", MudBlazor.Color.Default);
+            __builder.AddAttribute(3, "Size", MudBlazor.Size.Small);
+            __builder.CloseComponent();
+            return;
+        }
+
+        int? realId = esLocal ? slots.Local : slots.Visitante;
+        if (!realId.HasValue) return;
+
+        bool ok = predichoId == realId;
+
+        if (ok)
+        {
+            __builder.OpenComponent<MudIcon>(0);
+            __builder.AddAttribute(1, "Icon", Icons.Material.Filled.CheckCircle);
+            __builder.AddAttribute(2, "Color", MudBlazor.Color.Success);
+            __builder.AddAttribute(3, "Size", MudBlazor.Size.Small);
+            __builder.CloseComponent();
+        }
+        else
+        {
+            string nombre = _nombresEquipo.GetValueOrDefault(realId.Value, $"#{realId}");
+            string flagUrl = _planilla!.PrediccionesGrupo
+                .SelectMany(pg => new[] { pg.Partido.EquipoLocal, pg.Partido.EquipoVisitante })
+                .FirstOrDefault(e => e?.Id == realId)?.FlagUrl ?? "";
+
+            __builder.OpenComponent<MudTooltip>(0);
+            __builder.AddAttribute(1, "Placement", Placement.Top);
+            __builder.AddAttribute(2, "TooltipContent", (RenderFragment)(__b2 =>
+            {
+                __b2.OpenElement(0, "div");
+                __b2.AddAttribute(1, "class", "d-flex align-center gap-1");
+                if (!string.IsNullOrEmpty(flagUrl))
+                {
+                    __b2.OpenElement(2, "img");
+                    __b2.AddAttribute(3, "src", flagUrl);
+                    __b2.AddAttribute(4, "style", "height:14px;");
+                    __b2.CloseElement();
+                }
+                __b2.OpenElement(5, "span"); __b2.AddContent(6, nombre); __b2.CloseElement();
+                __b2.CloseElement();
+            }));
+            __builder.AddAttribute(3, "ChildContent", (RenderFragment)(__b2 =>
+            {
+                __b2.OpenComponent<MudIcon>(0);
+                __b2.AddAttribute(1, "Icon", Icons.Material.Filled.Cancel);
+                __b2.AddAttribute(2, "Color", MudBlazor.Color.Error);
+                __b2.AddAttribute(3, "Size", MudBlazor.Size.Small);
+                __b2.CloseComponent();
+            }));
+            __builder.CloseComponent();
+        }
+    };
+}
+
+<style>
+    .grupo-fila {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 8px 0;
+    }
+
+    .grupo-fila__equipos {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+        gap: 4px;
+    }
+
+        .grupo-fila__equipos > div {
+            flex: 1;
+            min-width: 0;
+        }
+
+    .grupo-fila__botones {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    @@media (max-width: 480px) {
+        .grupo-fila {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+        }
+
+        .grupo-fila__equipos {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+            .grupo-fila__equipos > div {
+                width: 100%;
+            }
+
+        .grupo-fila__botones {
+            justify-content: flex-start;
+            padding-top: 2px;
+        }
+    }
+</style>

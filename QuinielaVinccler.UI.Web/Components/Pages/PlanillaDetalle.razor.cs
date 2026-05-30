@@ -1,7 +1,5 @@
 namespace QuinielaVinccler.UI.Web.Components.Pages;
 
-using Color = MudBlazor.Color;
-
 public partial class PlanillaDetalle : ComponentBase
 {
     [Parameter] public int PlanillaId { get; set; }

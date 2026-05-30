@@ -61,17 +61,26 @@ public partial class ResultadosComponent : ComponentBase
     // ── Init ──────────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
-        _equipos = await Db.Equipos.OrderBy(e => e.Nombre).ToListAsync();
+        await CargarDatosAsync();
+    }
+
+    private async Task CargarDatosAsync()
+    {
+        _cargando = true;
+        _exitoGuardado = false;
+        StateHasChanged();
+
+        _equipos = await Db.Equipos.AsNoTracking().OrderBy(e => e.Nombre).ToListAsync();
         _equiposById = _equipos.ToDictionary(e => e.Id);
 
         var partidos = await Db.Partidos
+            .AsNoTracking()
             .Include(p => p.EquipoLocal)
             .Include(p => p.EquipoVisitante)
             .Include(p => p.EquipoGanador)
             .OrderBy(p => p.NumeroPartido)
             .ToListAsync();
 
-        // Grupos
         _grupoMap = partidos
             .Where(p => p.Fase == Fase.Grupos)
             .GroupBy(p => p.EquipoLocal!.Grupo)
@@ -81,7 +90,6 @@ public partial class ResultadosComponent : ComponentBase
         foreach (var p in partidos.Where(p => p.Fase == Fase.Grupos))
             _resultadosGrupo[p.Id] = p.ResultadoGrupo;
 
-        // Knockout
         _r32 = partidos.Where(p => p.Fase == Fase.RoundOf32).ToList();
         _r16 = partidos.Where(p => p.Fase == Fase.RoundOf16).ToList();
         _cuartos = partidos.Where(p => p.Fase == Fase.Cuartos).ToList();
@@ -89,17 +97,14 @@ public partial class ResultadosComponent : ComponentBase
         _tercero = partidos.FirstOrDefault(p => p.Fase == Fase.TercerPuesto);
         _finalPartido = partidos.FirstOrDefault(p => p.Fase == Fase.Final);
 
-        // Estado inicial R32
         foreach (var p in _r32)
             _estadoR32[p.Id] = (p.EquipoLocalId, p.EquipoVisitanteId);
 
-        // Estado ko R16+: local y visitante
         foreach (var p in _r16.Concat(_cuartos).Concat(_semis)
                                .Concat(_tercero is null ? [] : [_tercero])
                                .Concat(_finalPartido is null ? [] : [_finalPartido]))
             _equiposKo[p.Id] = (p.EquipoLocalId, p.EquipoVisitanteId);
 
-        // Marcadores
         var semi1 = partidos.FirstOrDefault(p => p.NumeroPartido == 101);
         var semi2 = partidos.FirstOrDefault(p => p.NumeroPartido == 102);
         var final = partidos.FirstOrDefault(p => p.NumeroPartido == 104);
@@ -111,9 +116,10 @@ public partial class ResultadosComponent : ComponentBase
         _marcadorFinalLocal = final?.GolesLocal;
         _marcadorFinalVisitante = final?.GolesVisitante;
 
-        _resultadoFinal = await Db.ResultadoFinal.FirstOrDefaultAsync();
+        _resultadoFinal = await Db.ResultadoFinal.AsNoTracking().FirstOrDefaultAsync();
 
         _cargando = false;
+        StateHasChanged();
     }
 
     // ── Helpers de estado local ───────────────────────────────────────────────
@@ -273,11 +279,26 @@ public partial class ResultadosComponent : ComponentBase
 
     internal async Task EjecutarResetPuntos()
     {
-        await PuntuacionSvc.ResetearTodosPuntosAsync();
-        _showResetPuntos = false;
-        _exitoGuardado = true;
+        _guardando = true;
+        _errorGuardado = null;
+        try
+        {
+            await PuntuacionSvc.ResetearTodosPuntosAsync();
+            _showResetPuntos = false;
+            _exitoGuardado = true;
+            await CargarDatosAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorGuardado = $"Error al resetear: {ex.Message}";
+            _showResetPuntos = false;
+        }
+        finally
+        {
+            _guardando = false;
+            StateHasChanged();
+        }
     }
-
     internal void AbrirConfirmacion(TabResultado tab)
     {
         _tabActual = tab;

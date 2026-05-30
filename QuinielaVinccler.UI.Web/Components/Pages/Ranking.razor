@@ -8,75 +8,79 @@
 
 <style>
     .ranking-fila-actual td {
+        background-color: #77ea7d !important;
         font-weight: 600;
     }
-
-    .ranking-podio-1 {
-        color: #FFD700;
-    }
-
-    .ranking-podio-2 {
-        color: #C0C0C0;
-    }
-
-    .ranking-podio-3 {
-        color: #CD7F32;
-    }
-
-    .premios-card {
-        border-left: 4px solid var(--mud-palette-primary);
-    }
-
-    .planilla-link {
-        cursor: pointer;
-        text-decoration: underline dotted;
-    }
+    .ranking-podio-1 { color: #FFD700; }
+    .ranking-podio-2 { color: #C0C0C0; }
+    .ranking-podio-3 { color: #CD7F32; }
+    .premios-card { border-left: 4px solid var(--mud-palette-primary); }
+    .planilla-link { cursor: pointer; text-decoration: underline dotted; }
 </style>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
 
-    @* ── ENCABEZADO ── *@
     <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
         <MudText Typo="Typo.h4">🏆 Ranking</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary">
-            @_total participantes
+            @_total participante@(_total == 1 ? "" : "s")
         </MudText>
     </div>
 
-    @* ── PREMIOS ── *@
-    <MudCard Class="mb-5" Elevation="1">
-        <MudGrid>
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="ranking-podio-1">🥇 1er Premio</MudText>
-                    <MudText Typo="Typo.body1">$2,000 + 50% de lo recaudado</MudText>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="ranking-podio-2">🥈 2do Premio</MudText>
-                    <MudText Typo="Typo.body1">$1,000 + 30% de lo recaudado</MudText>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6" Class="ranking-podio-3">🥉 3er Premio</MudText>
-                    <MudText Typo="Typo.body1">$500 + 20% de lo recaudado</MudText>
-                </MudPaper>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudPaper Class="pa-3" Style="border-left: 4px solid var(--mud-palette-error);" Elevation="0" Outlined="true">
-                    <MudText Typo="Typo.h6">🤡 Menor puntaje</MudText>
-                    <MudText Typo="Typo.body1">$2,000</MudText>
-                </MudPaper>
-            </MudItem>
-        </MudGrid>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
-            * En caso de empate, el premio se reparte proporcionalmente entre los empatados.
-        </MudText>
-    </MudCard>
+    <MudExpansionPanels Class="mb-5" Elevation="1">
+        <MudExpansionPanel Text="Ver premios">
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="ranking-podio-1">🥇 1er Premio</MudText>
+                        <MudText Typo="Typo.body1">$2,000 + 50% de lo recaudado</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="ranking-podio-2">🥈 2do Premio</MudText>
+                        <MudText Typo="Typo.body1">$1,000 + 30% de lo recaudado</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6" Class="ranking-podio-3">🥉 3er Premio</MudText>
+                        <MudText Typo="Typo.body1">$500 + 20% de lo recaudado</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Class="pa-3" Style="border-left: 4px solid var(--mud-palette-error);"
+                              Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h6">🤡 Menor puntaje</MudText>
+                        <MudText Typo="Typo.body1">$2,000</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                * En caso de empate, el premio se reparte proporcionalmente.
+            </MudText>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
 
-    @* ── TABLA ── *@
+    @* ── Filtro + selector de tamaño ── *@
+    <div class="d-flex align-center gap-4 mb-3 flex-wrap">
+        <MudSwitch T="bool" Value="_soloMias" ValueChanged="ToggleSoloMias"
+                   Color="Color.Primary" Label="Ver solo mis planillas" />
+
+        @if (!_soloMias)
+        {
+            <div class="d-flex align-center gap-2">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Filas por página:</MudText>
+                <MudSelect T="int" Value="_pageSize" ValueChanged="CambiarPageSize"
+                           Dense="true" Margin="Margin.Dense" Style="width:90px">
+                    <MudSelectItem Value="10">10</MudSelectItem>
+                    <MudSelectItem Value="20">20</MudSelectItem>
+                    <MudSelectItem Value="50">50</MudSelectItem>
+                </MudSelect>
+            </div>
+        }
+    </div>
+
     @if (_cargando)
     {
         <div class="d-flex justify-center pa-12">
@@ -87,9 +91,13 @@
     {
         <MudAlert Severity="Severity.Info">Aún no hay planillas participando.</MudAlert>
     }
+    else if (_filtradas.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No tienes planillas vinculadas.</MudAlert>
+    }
     else
     {
-        <MudTable Items="_ranking" Hover="true" Dense="true" Elevation="2"
+        <MudTable Items="_paginadas" Hover="true" Dense="true" Elevation="2"
                   RowClassFunc="FilaClass" T="RankingItemDto">
             <HeaderContent>
                 <MudTh Style="width:60px">#</MudTh>
@@ -102,18 +110,16 @@
                     @switch (context.Posicion)
                     {
                         case 1:
-                            <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>
-                            ; break;
+                            <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>;
+                            break;
                         case 2:
-
-                            <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>
-                            ; break;
+                            <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>;
+                            break;
                         case 3:
-
-                            <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>
-                            ; break;
+                            <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>;
+                            break;
                         default:
-                            @if (context.Posicion == _ultimaPosicion)
+                            @if (context.Posicion == _ultimaPosicion && context.Posicion > 3)
                             {
                                 <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
                             }
@@ -138,6 +144,17 @@
                 </MudTd>
             </RowTemplate>
         </MudTable>
+
+        @if (MostrarPaginador)
+        {
+            <div class="d-flex justify-center mt-4">
+                <MudPagination Color="Color.Primary"
+                               Count="@TotalPaginas"
+                               Selected="_paginaActual"
+                               SelectedChanged="CambiarPagina"
+                               ShowFirstButton="true" ShowLastButton="true" />
+            </div>
+        }
     }
 
 </MudContainer>

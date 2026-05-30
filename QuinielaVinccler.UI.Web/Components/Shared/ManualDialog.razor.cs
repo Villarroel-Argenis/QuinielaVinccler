@@ -1,6 +1,4 @@
 using Markdig;
-using Microsoft.AspNetCore.Components;
-using MudBlazor;
 
 namespace QuinielaVinccler.UI.Web.Components.Shared;
 

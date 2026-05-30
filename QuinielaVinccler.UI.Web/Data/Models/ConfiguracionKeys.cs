@@ -1,11 +1,10 @@
-namespace QuinielaVinccler.UI.Web.Services;
+// ── AGREGAR a la clase ConfiguracionKeys existente en Data/Models/ ──
 
-/// <summary>
-/// Claves usadas en la tabla Configuraciones.
-/// Centralizadas aquí para evitar magic strings dispersos.
-/// </summary>
+namespace QuinielaVinccler.UI.Web.Data.Models;
+
 public static class ConfiguracionKeys
 {
     public const string QuinielaCerrada = "QuinielaCerrada";
-    public const string FechaCierreUtc  = "FechaCierreUtc";
+    public const string FechaCierreUtc = "FechaCierreUtc";
+    public const string MontoRecaudado = "MontoRecaudado";  
 }

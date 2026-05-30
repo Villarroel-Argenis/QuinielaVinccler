@@ -1,5 +1,10 @@
 // Components/Shared/PlanillaModal.razor.cs
-using System.Reflection.Metadata.Ecma335;
+using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
+using MudBlazor;
+using QuinielaVinccler.UI.Web.Data;
+using QuinielaVinccler.UI.Web.Data.Models;
+using QuinielaVinccler.UI.Web.Services;
 
 namespace QuinielaVinccler.UI.Web.Components.Shared;
 
@@ -18,111 +23,142 @@ public partial class PlanillaModal : ComponentBase
     private Planilla? _planilla;
     private ResultadoFinal? _resultadoFinal;
 
-    // Resultados reales cacheados para mostrar ✅/❌
+    // Resultados reales para ✅/❌
     private Dictionary<int, ResultadoPartido?> _resultadosGrupo = [];
-    private Dictionary<int, int?> _resultadosKo = [];
+    private Dictionary<int, (int? Local, int? Visitante)> _resultadosR32 = [];
+    private Dictionary<int, (int? Local, int? Visitante)> _resultadosKoSlots = [];
     private Dictionary<string, (int? Local, int? Visitante)?> _marcadoresSemis = [];
+
+    // Lookup nombre por equipoId
+    private Dictionary<int, string> _nombresEquipo = [];
 
     private static readonly (Fase Fase, string Label)[] _fasesKo =
     [
-        (Fase.Cuartos, "Cuartos"),
-        (Fase.Semis, "Semis"),
+        (Fase.Cuartos,      "Cuartos"),
+        (Fase.Semis,        "Semis"),
         (Fase.TercerPuesto, "3°/4°"),
-        (Fase.Final, "Final"),
+        (Fase.Final,        "Final"),
     ];
 
     protected override async Task OnParametersSetAsync()
     {
         _cargando = true;
-        // userId = 0 → sin restricción de usuario (cualquier planilla)
         _planilla = await PredSvc.CargarPlanillaAsync(PlanillaId, UserId);
 
         if (_planilla is not null)
-        {
             await CargarResultadosRealesAsync();
-        }
 
         _cargando = false;
     }
 
     private async Task CargarResultadosRealesAsync()
     {
-        // Resultados de grupo
+        // ── Lookup nombres de equipos ─────────────────────────────────────────
+        var equipos = await Db.Equipos.AsNoTracking()
+            .Select(e => new { e.Id, e.Nombre })
+            .ToListAsync();
+        _nombresEquipo = equipos.ToDictionary(e => e.Id, e => e.Nombre);
+
+        // ── Resultados de grupo ───────────────────────────────────────────────
         var idsGrupo = _planilla!.PrediccionesGrupo.Select(pg => pg.PartidoId).ToList();
-        var partidos = await Db.Partidos
-            .AsNoTracking()
+        var pGrupo = await Db.Partidos.AsNoTracking()
             .Where(p => idsGrupo.Contains(p.Id))
             .Select(p => new { p.Id, p.ResultadoGrupo })
             .ToListAsync();
+        _resultadosGrupo = pGrupo.ToDictionary(p => p.Id, p => p.ResultadoGrupo);
 
-        _resultadosGrupo = partidos.ToDictionary(p => p.Id, p => p.ResultadoGrupo);
-
-        // Resultados knockout (ganador)
+        // ── Resultados knockout ───────────────────────────────────────────────
         var idsKo = _planilla.PrediccionesKnockout.Select(pk => pk.PartidoId).ToList();
-        var partidosKo = await Db.Partidos
-            .AsNoTracking()
+        var pKo = await Db.Partidos.AsNoTracking()
             .Where(p => idsKo.Contains(p.Id))
-            .Select(p => new { p.Id, p.EquipoGanadorId })
+            .Select(p => new { p.Id, p.Fase, p.EquipoLocalId, p.EquipoVisitanteId })
             .ToListAsync();
 
-        _resultadosKo = partidosKo.ToDictionary(p => p.Id, p => p.EquipoGanadorId);
+        // R32: slots Local/Visitante para comparar predicción por slot
+        _resultadosR32 = pKo
+            .Where(p => p.Fase == Fase.RoundOf32)
+            .ToDictionary(p => p.Id, p => (p.EquipoLocalId, p.EquipoVisitanteId));
 
-        // Marcadores exactos (SF1, SF2, GF)
-        var semis = await Db.Partidos
-            .AsNoTracking()
-            .Where(p => p.Fase == Fase.Semis || p.Fase == Fase.Final)
-            .OrderBy(p => p.NumeroPartido)
-            .Select(p => new { p.Fase, p.GolesLocal, p.GolesVisitante })
+        // R16+: misma estructura, diccionario separado
+        _resultadosKoSlots = pKo
+            .Where(p => p.Fase != Fase.RoundOf32)
+            .ToDictionary(p => p.Id, p => (p.EquipoLocalId, p.EquipoVisitanteId));
+
+        // ── Marcadores exactos SF1, SF2, GF ──────────────────────────────────
+        var marcadores = await Db.Partidos.AsNoTracking()
+            .Where(p => p.NumeroPartido == 101 || p.NumeroPartido == 102 || p.NumeroPartido == 104)
+            .Select(p => new { p.NumeroPartido, p.GolesLocal, p.GolesVisitante })
             .ToListAsync();
 
-        var sf = semis.Where(p => p.Fase == Fase.Semis).ToList();
-        var gf = semis.FirstOrDefault(p => p.Fase == Fase.Final);
+        foreach (var m in marcadores)
+        {
+            if (m.NumeroPartido == 101 && m.GolesLocal.HasValue)
+                _marcadoresSemis["SF1"] = (m.GolesLocal, m.GolesVisitante);
+            else if (m.NumeroPartido == 102 && m.GolesLocal.HasValue)
+                _marcadoresSemis["SF2"] = (m.GolesLocal, m.GolesVisitante);
+            else if (m.NumeroPartido == 104 && m.GolesLocal.HasValue)
+                _marcadoresSemis["GF"] = (m.GolesLocal, m.GolesVisitante);
+        }
 
-        if (sf.Count >= 1 && sf[0].GolesLocal.HasValue)
-            _marcadoresSemis["SF1"] = (sf[0].GolesLocal, sf[0].GolesVisitante);
-        if (sf.Count >= 2 && sf[1].GolesLocal.HasValue)
-            _marcadoresSemis["SF2"] = (sf[1].GolesLocal, sf[1].GolesVisitante);
-        if (gf?.GolesLocal.HasValue == true)
-            _marcadoresSemis["GF"] = (gf.GolesLocal, gf.GolesVisitante);
-
-        // ResultadoFinal singleton
-        _resultadoFinal = await Db.ResultadoFinal
-            .AsNoTracking()
+        // ── ResultadoFinal singleton ──────────────────────────────────────────
+        _resultadoFinal = await Db.ResultadoFinal.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == 1);
     }
 
-    private RenderFragment RenderFilaFinal(string label, int? predichoId, int? realId) => __builder =>
+    // ── Color para botones 1/X/2 en grupos ───────────────────────────────────
+    private MudBlazor.Color ResultadoRealColor(
+        ResultadoPartido evaluar,
+        ResultadoPartido? prediccion,
+        ResultadoPartido? resultado)
     {
-        var nombrePredecho = predichoId.HasValue
-            ? _planilla!.PrediccionesKnockout
-                .SelectMany(pk => new[] { pk.EquipoLocalPredichado, pk.EquipoVisitantePredichado, pk.EquipoGanador })
-                .Concat(_planilla.PrediccionesGrupo.SelectMany(pg => new[] { pg.Partido.EquipoLocal, pg.Partido.EquipoVisitante }))
-                .FirstOrDefault(e => e?.Id == predichoId)?.Nombre ?? $"#{predichoId}"
+        if (evaluar != prediccion && evaluar != resultado) return MudBlazor.Color.Default;
+        if (evaluar == resultado && evaluar == prediccion) return MudBlazor.Color.Success;
+        if (evaluar == resultado)                          return MudBlazor.Color.Warning;
+        return MudBlazor.Color.Error; // predijo este pero no era
+    }
+
+    // ── RenderFragment: fila de posición final ────────────────────────────────
+    private RenderFragment RenderFilaFinal(string label, int? predichoId, int? realId, int ptsMaximos) => __builder =>
+    {
+        var nombre = predichoId.HasValue
+            ? _nombresEquipo.GetValueOrDefault(predichoId.Value, $"#{predichoId}")
             : "—";
+
+        bool? ok = (predichoId.HasValue && realId.HasValue) ? predichoId == realId : null;
+        string ptsStr = ok.HasValue ? (ok.Value ? $"+{ptsMaximos}" : "0") : "—";
 
         __builder.OpenElement(0, "tr");
         __builder.OpenElement(1, "td"); __builder.AddContent(2, label); __builder.CloseElement();
-        __builder.OpenElement(3, "td"); __builder.AddContent(4, nombrePredecho); __builder.CloseElement();
+        __builder.OpenElement(3, "td"); __builder.AddContent(4, nombre); __builder.CloseElement();
+        // Columna pts
         __builder.OpenElement(5, "td");
-        if (predichoId.HasValue && realId.HasValue)
+        __builder.AddAttribute(6, "style", $"font-weight:600;color:{(ok == true ? "var(--mud-palette-success)" : ok == false ? "var(--mud-palette-error)" : "inherit")}");
+        __builder.AddContent(7, ptsStr);
+        __builder.CloseElement();
+        // Columna ícono
+        __builder.OpenElement(8, "td");
+        if (ok.HasValue)
         {
-            // Emitir ícono según acierto
-            __builder.OpenComponent<MudIcon>(6);
-            __builder.AddAttribute(7, "Icon", predichoId == realId
+            __builder.OpenComponent<MudIcon>(9);
+            __builder.AddAttribute(10, "Icon", ok.Value
                 ? Icons.Material.Filled.CheckCircle
                 : Icons.Material.Filled.Cancel);
-            __builder.AddAttribute(8, "Color", predichoId == realId ? MudBlazor.Color.Success : MudBlazor.Color.Error);
-            __builder.AddAttribute(9, "Size", MudBlazor.Size.Small);
+            __builder.AddAttribute(11, "Color", ok.Value
+                ? MudBlazor.Color.Success
+                : MudBlazor.Color.Error);
+            __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
             __builder.CloseComponent();
         }
         __builder.CloseElement();
         __builder.CloseElement();
     };
 
+    // ── RenderFragment: fila de marcador exacto ───────────────────────────────
     private RenderFragment RenderFilaMarcador(
         string label,
         int? golesLocalPred, int? golesVisitantePred,
-        (int? Local, int? Visitante)? real) => __builder =>
+        (int? Local, int? Visitante)? real,
+        int? ptsObtenidos) => __builder =>
     {
         var pred = (golesLocalPred.HasValue && golesVisitantePred.HasValue)
             ? $"{golesLocalPred} - {golesVisitantePred}"
@@ -132,18 +168,26 @@ public partial class PlanillaModal : ComponentBase
         if (real.HasValue && golesLocalPred.HasValue && golesVisitantePred.HasValue)
             acierto = golesLocalPred == real.Value.Local && golesVisitantePred == real.Value.Visitante;
 
+        string ptsStr = ptsObtenidos.HasValue ? (ptsObtenidos > 0 ? $"+{ptsObtenidos}" : "0") : "—";
+
         __builder.OpenElement(0, "tr");
         __builder.OpenElement(1, "td"); __builder.AddContent(2, label); __builder.CloseElement();
         __builder.OpenElement(3, "td"); __builder.AddContent(4, pred); __builder.CloseElement();
         __builder.OpenElement(5, "td");
+        __builder.AddAttribute(6, "style", $"font-weight:600;color:{(acierto == true ? "var(--mud-palette-success)" : acierto == false ? "var(--mud-palette-error)" : "inherit")}");
+        __builder.AddContent(7, ptsStr);
+        __builder.CloseElement();
+        __builder.OpenElement(8, "td");
         if (acierto.HasValue)
         {
-            __builder.OpenComponent<MudIcon>(6);
-            __builder.AddAttribute(7, "Icon", acierto.Value
+            __builder.OpenComponent<MudIcon>(9);
+            __builder.AddAttribute(10, "Icon", acierto.Value
                 ? Icons.Material.Filled.CheckCircle
                 : Icons.Material.Filled.Cancel);
-            __builder.AddAttribute(8, "Color", acierto.Value ? MudBlazor.Color.Success : MudBlazor.Color.Error);
-            __builder.AddAttribute(9, "Size", MudBlazor.Size.Small);
+            __builder.AddAttribute(11, "Color", acierto.Value
+                ? MudBlazor.Color.Success
+                : MudBlazor.Color.Error);
+            __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
             __builder.CloseComponent();
         }
         __builder.CloseElement();
@@ -151,14 +195,4 @@ public partial class PlanillaModal : ComponentBase
     };
 
     private void Cerrar() => MudDialog.Close();
-
-    private MudBlazor.Color? ResultadoRealColor(ResultadoPartido evaluar, ResultadoPartido? prediccion, ResultadoPartido? resultado)
-    {
-        if (resultado == evaluar) return MudBlazor.Color.Primary;
-        if (prediccion != evaluar) return MudBlazor.Color.Default;
-        if (prediccion == resultado) return MudBlazor.Color.Primary;
-        
-
-        return MudBlazor.Color.Error; // Deshabilitado para no revelar resultados reales en la modal
-    }
 }

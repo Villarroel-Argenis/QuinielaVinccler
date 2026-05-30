@@ -120,7 +120,8 @@ public partial class Ranking : ComponentBase
         {
             { x => x.PlanillaId, item.PlanillaId },
             { x => x.UserId, item.UserId  },
-            { x => x.CodigoPlanilla, item.CodigoPlanilla }
+            { x => x.CodigoPlanilla, item.CodigoPlanilla },
+            { x => x.NombreUsuario, item.Nombre  }
         };
 
         var opciones = new DialogOptions

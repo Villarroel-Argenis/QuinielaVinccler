@@ -8,6 +8,7 @@ public partial class PlanillaModal : ComponentBase
     [Parameter] public int PlanillaId { get; set; }
     [Parameter] public int UserId { get; set; }
     [Parameter] public string CodigoPlanilla { get; set; } = "";
+    [Parameter] public string NombreUsuario { get; set; } = "";
 
     [Inject] private IPredictionService PredSvc { get; set; } = null!;
     [Inject] private AppDbContext Db { get; set; } = null!;

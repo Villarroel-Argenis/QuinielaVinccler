@@ -180,4 +180,63 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
             throw;
         }
     }
+
+    // ── Agregar este método a PlanillaService ──────────────────────────────────
+    // (resto de la clase sin cambios)
+
+    public async Task<List<RankingItemDto>> GetRankingAsync(int userId)
+    {
+        // Solo planillas vinculadas (UserId != null)
+        var raw = await db.Planillas
+            .AsNoTracking()
+            .Where(p => p.UserId != null)
+            .Include(p => p.User)
+            .OrderByDescending(p => p.PuntajeTotal)
+            .Select(p => new
+            {
+                p.Id,
+                p.Codigo,
+                p.PuntajeTotal,
+                p.UserId,
+                Nombre = p.User != null ? p.User.FullName : "—"
+            })
+            .ToListAsync();
+
+        // Dense ranking en memoria (EF no soporta DENSE_RANK directamente sin raw SQL)
+        var resultado = new List<RankingItemDto>(raw.Count);
+        int posicion = 1;
+        int puntajeAnterior = int.MinValue;
+        int posicionActual = 1;
+
+        for (int i = 0; i < raw.Count; i++)
+        {
+            var item = raw[i];
+
+            if (i == 0)
+            {
+                posicionActual = 1;
+                puntajeAnterior = item.PuntajeTotal;
+            }
+            else if (item.PuntajeTotal < puntajeAnterior)
+            {
+                posicionActual = posicion;
+                puntajeAnterior = item.PuntajeTotal;
+            }
+            // Si puntaje == anterior, posicionActual se mantiene (dense rank)
+
+            resultado.Add(new RankingItemDto(
+                Posicion: posicionActual,
+                Nombre: item.Nombre,
+                CodigoPlanilla: item.Codigo,
+                PlanillaId: item.Id,
+                PuntajeTotal: item.PuntajeTotal,
+                EsUsuarioActual: item.UserId == userId,
+                UserId: item.UserId ?? 0
+            ));
+
+            posicion++;
+        }
+
+        return resultado;
+    }
 }

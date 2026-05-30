@@ -1,0 +1,317 @@
+@* Components/Shared/PlanillaModal.razor *@
+@using QuinielaVinccler.UI.Web.Data.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            Planilla @CodigoPlanilla
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (_cargando)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" />
+            </div>
+        }
+        else if (_planilla is null)
+        {
+            <MudAlert Severity="Severity.Warning">No se pudo cargar la planilla.</MudAlert>
+        }
+        else
+        {
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+
+                @* ── FASE DE GRUPOS ── *@
+                <MudTabPanel Text="Fase de Grupos">
+                    @foreach (var grupo in _planilla!.PrediccionesGrupo
+                        .GroupBy(p => p.Partido.EquipoLocal!.Grupo)
+                        .OrderBy(g => g.Key))
+                    {
+                        <div class="d-flex align-center px-1 pt-4 pb-1 mb-1">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight:700;">Grupo @grupo.Key</MudText>
+                        </div>
+                        <MudPaper Elevation="1" Class="mb-3 rounded">
+
+                            @foreach (var pg in grupo.OrderBy(x => x.Partido.NumeroPartido))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 pa-3">
+                                    Partido #@pg.Partido.NumeroPartido
+                                    <span style="opacity:0.6; margin-left:8px;">
+                                        @pg.Partido.FechaHoraUtc.ToLocalTime().ToString("ddd dd MMM · HH:mm")
+                                    </span>
+                                </MudText>
+                                <div class="grupo-fila px-3" style="border-bottom:1px solid rgba(0,0,0,.08);">
+
+                                    @* ── Equipos ── *@
+                                    <div class="grupo-fila__equipos">
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            <img src="@pg.Partido.EquipoLocal!.FlagUrl"
+                                                 style="height:16px; flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                @pg.Partido.EquipoLocal.Nombre
+                                            </MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                                 Style="flex-shrink:0; padding:0 4px;">vs</MudText>
+                                        <div class="d-flex align-center gap-1" style="min-width:0;">
+                                            <img src="@pg.Partido.EquipoVisitante!.FlagUrl"
+                                                 style="height:16px; flex-shrink:0;" />
+                                            <MudText Typo="Typo.body2"
+                                                     Style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                                @pg.Partido.EquipoVisitante.Nombre
+                                            </MudText>
+                                        </div>
+                                    </div>
+
+                                    @* ── Botones 1/X/2 ── *@
+                                    @if(pg.ResultadoPredicho is null)
+                                    {
+                                        <MudAlert Severity="Severity.Warning">Sin predicción!.</MudAlert>
+                                    }
+                                    else {
+                                    <div class="grupo-fila__botones">
+                                        @if (_resultadosGrupo.TryGetValue(pg.PartidoId, out var rReal) && rReal.HasValue)
+                                        {
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@ResultadoRealColor(ResultadoPartido.Uno, pg.ResultadoPredicho, rReal)">1</MudChip>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@ResultadoRealColor(ResultadoPartido.Equis, pg.ResultadoPredicho, rReal)">X</MudChip>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@ResultadoRealColor(ResultadoPartido.Dos, pg.ResultadoPredicho, rReal)">2</MudChip>
+
+                                            <MudIcon Icon="@(pg.ResultadoPredicho == rReal ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)"
+                                                     Color="@(pg.ResultadoPredicho == rReal ? Color.Success : Color.Error)"
+                                                     Size="Size.Small" />
+
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@(pg.ResultadoPredicho == ResultadoPartido.Uno ? Color.Warning : Color.Default)">1</MudChip>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@(pg.ResultadoPredicho == ResultadoPartido.Equis ? Color.Warning : Color.Default)">X</MudChip>
+                                            <MudChip T="string" Size="Size.Small"
+                                                     Color="@(pg.ResultadoPredicho == ResultadoPartido.Dos ? Color.Warning : Color.Default)">2</MudChip>
+
+                                        }
+                                        
+                                    </div>
+                                    }
+                                </div>
+                            }
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── DIECISEISAVOS ── *@
+                <MudTabPanel Text="Dieciseisavos">
+                    @foreach (var pk in _planilla.PrediccionesKnockout
+                        .Where(x => x.Partido.Fase == Fase.RoundOf32)
+                        .OrderBy(x => x.Partido.NumeroPartido))
+                    {
+                        var local = pk.EquipoLocalPredichado?.Nombre ?? pk.Partido.SlotLocal;
+                        var visitante = pk.EquipoVisitantePredichado?.Nombre ?? pk.Partido.SlotVisitante;
+                        var ganador = pk.EquipoGanador?.Nombre;
+                        <MudPaper Class="d-flex align-center justify-space-between px-3 py-2 mb-1" Elevation="0" Outlined="true">
+                            <MudText Typo="Typo.body2">@local vs @visitante</MudText>
+                            <div class="d-flex align-center gap-2">
+                                @if (ganador is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@ganador</MudChip>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                                @if (_resultadosKo.TryGetValue(pk.PartidoId, out var rReal) && rReal.HasValue)
+                                {
+                                    <MudIcon Icon="@(pk.EquipoGanadorId == rReal ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Color="@(pk.EquipoGanadorId == rReal ? Color.Success : Color.Error)"
+                                             Size="Size.Small" />
+                                }
+                            </div>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── OCTAVOS ── *@
+                <MudTabPanel Text="Octavos">
+                    @foreach (var pk in _planilla.PrediccionesKnockout
+                        .Where(x => x.Partido.Fase == Fase.RoundOf16)
+                        .OrderBy(x => x.Partido.NumeroPartido))
+                    {
+                        var local = pk.EquipoLocalPredichado?.Nombre ?? pk.Partido.SlotLocal;
+                        var visitante = pk.EquipoVisitantePredichado?.Nombre ?? pk.Partido.SlotVisitante;
+                        var ganador = pk.EquipoGanador?.Nombre;
+                        <MudPaper Class="d-flex align-center justify-space-between px-3 py-2 mb-1" Elevation="0" Outlined="true">
+                            <MudText Typo="Typo.body2">@local vs @visitante</MudText>
+                            <div class="d-flex align-center gap-2">
+                                @if (ganador is not null)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">@ganador</MudChip>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                }
+                                @if (_resultadosKo.TryGetValue(pk.PartidoId, out var rReal) && rReal.HasValue)
+                                {
+                                    <MudIcon Icon="@(pk.EquipoGanadorId == rReal ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Color="@(pk.EquipoGanadorId == rReal ? Color.Success : Color.Error)"
+                                             Size="Size.Small" />
+                                }
+                            </div>
+                        </MudPaper>
+                    }
+                </MudTabPanel>
+
+                @* ── CUARTOS, SEMIS, 3/4, FINAL ── *@
+                @foreach (var (fase, label) in _fasesKo)
+                {
+                    <MudTabPanel Text="@label">
+                        @foreach (var pk in _planilla.PrediccionesKnockout
+                            .Where(x => x.Partido.Fase == fase)
+                            .OrderBy(x => x.Partido.NumeroPartido))
+                        {
+                            var local = pk.EquipoLocalPredichado?.Nombre ?? pk.Partido.SlotLocal;
+                            var visitante = pk.EquipoVisitantePredichado?.Nombre ?? pk.Partido.SlotVisitante;
+                            var ganador = pk.EquipoGanador?.Nombre;
+                            <MudPaper Class="d-flex align-center justify-space-between px-3 py-2 mb-1" Elevation="0" Outlined="true">
+                                <MudText Typo="Typo.body2">@local vs @visitante</MudText>
+                                <div class="d-flex align-center gap-2">
+                                    @if (ganador is not null)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@ganador</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">—</MudText>
+                                    }
+                                    @if (_resultadosKo.TryGetValue(pk.PartidoId, out var rReal) && rReal.HasValue)
+                                    {
+                                        <MudIcon Icon="@(pk.EquipoGanadorId == rReal ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                                 Color="@(pk.EquipoGanadorId == rReal ? Color.Success : Color.Error)"
+                                                 Size="Size.Small" />
+                                    }
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudTabPanel>
+                }
+
+                @* ── POSICIONES FINALES ── *@
+                @if (_planilla.PrediccionFinal is not null)
+                {
+                    <MudTabPanel Text="Final">
+                        @{
+                            var pf = _planilla.PrediccionFinal;
+                            var rf = _resultadoFinal;
+                        }
+                        <MudSimpleTable Dense="true" Hover="true" Class="mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Predicción</th>
+                                    <th>Equipo</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @RenderFilaFinal("🏆 Campeón", pf.CampeonEquipoId, rf?.CampeonEquipoId)
+                                @RenderFilaFinal("🥈 2° Lugar", pf.SegundoLugarEquipoId, rf?.SegundoLugarEquipoId)
+                                @RenderFilaFinal("🥉 3° Lugar", pf.TercerLugarEquipoId, rf?.TercerLugarEquipoId)
+                                @RenderFilaFinal("4° Lugar", pf.CuartoLugarEquipoId, rf?.CuartoLugarEquipoId)
+                                @RenderFilaFinal("⚽ Más Goleador", pf.MasGoleadorEquipoId, rf?.MasGoleadorEquipoId)
+                                @RenderFilaFinal("🔥 Más Goleado", pf.MasGoleadoEquipoId, rf?.MasGoleadoEquipoId)
+                                @RenderFilaFinal("🛡️ Menos Goleado", pf.MenosGoleadoEquipoId, rf?.MenosGoleadoEquipoId)
+                            </tbody>
+                        </MudSimpleTable>
+
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Marcadores exactos</MudText>
+                        <MudSimpleTable Dense="true" Hover="true">
+                            <thead><tr><th>Partido</th><th>Predicción</th><th></th></tr></thead>
+                            <tbody>
+                                @RenderFilaMarcador("Semifinal 1", pf.GolesLocalSemi1, pf.GolesVisitanteSemi1,
+                                    _marcadoresSemis.GetValueOrDefault("SF1"))
+                                @RenderFilaMarcador("Semifinal 2", pf.GolesLocalSemi2, pf.GolesVisitanteSemi2,
+                                    _marcadoresSemis.GetValueOrDefault("SF2"))
+                                @RenderFilaMarcador("Gran Final", pf.GolesLocalGranFinal, pf.GolesVisitanteGranFinal,
+                                    _marcadoresSemis.GetValueOrDefault("GF"))
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudTabPanel>
+                }
+            </MudTabs>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cerrar" Variant="Variant.Filled" Color="Color.Primary">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    /* ── Fila de partido en fase de grupos ─────────────────────────────────── */
+
+    /* fecha arriba full-width, equipos y botones en segunda fila */
+    .grupo-fila {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 2px 8px;
+        padding: 8px 0;
+    }
+
+    .partido-fecha {
+        grid-column: 1 / -1;
+        opacity: 0.6;
+        font-size: 0.7rem;
+    }
+
+    .grupo-fila__equipos {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        overflow: hidden;
+        gap: 4px;
+    }
+
+        .grupo-fila__equipos > div {
+            flex: 1;
+            min-width: 0;
+        }
+
+    .grupo-fila__botones {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    /* Mobile: cada equipo en su propia línea, botones debajo */
+    @@media (max-width: 480px) {
+        .grupo-fila {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+        }
+
+        .grupo-fila__equipos {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+
+            .grupo-fila__equipos > div {
+                width: 100%;
+            }
+
+        .grupo-fila__botones {
+            justify-content: flex-start;
+            padding-top: 2px;
+        }
+    }
+</style>

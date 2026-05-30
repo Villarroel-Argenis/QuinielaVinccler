@@ -1,0 +1,104 @@
+@* Components/Shared/RankingWidget.razor *@
+@using QuinielaVinccler.UI.Web.Services
+
+<MudPaper Elevation="2" Class="pa-4">
+    <div class="d-flex align-center justify-space-between mb-3 flex-wrap gap-2">
+        <MudText Typo="Typo.h6">🏆 Ranking</MudText>
+        <div class="d-flex align-center gap-2">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Mostrar:</MudText>
+            <MudSelect T="int" Value="_limite" ValueChanged="CambiarLimite"
+                       Dense="true" Margin="Margin.Dense" Style="width:80px">
+                <MudSelectItem Value="10">10</MudSelectItem>
+                <MudSelectItem Value="15">15</MudSelectItem>
+                <MudSelectItem Value="25">25</MudSelectItem>
+            </MudSelect>
+        </div>
+    </div>
+
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-6">
+            <MudProgressCircular Indeterminate="true" />
+        </div>
+    }
+    else if (_ranking.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Sin datos aún.</MudText>
+    }
+    else
+    {
+        <MudSimpleTable Dense="true" Hover="true">
+            <thead>
+                <tr>
+                    <th style="width:48px">#</th>
+                    <th>Participante</th>
+                    <th>Planilla</th>
+                    <th style="text-align:right">Pts</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _visible)
+                {
+                    var claseActual = item.EsUsuarioActual ? "ranking-fila-actual" : "";
+                    <tr class="@claseActual">
+                        <td>
+                            @switch (item.Posicion)
+                            {
+                                case 1: <span>🥇</span>; break;
+                                case 2: <span>🥈</span>; break;
+                                case 3: <span>🥉</span>; break;
+                                default: @item.Posicion; break;
+                            }
+                        </td>
+                        <td><MudText Typo="Typo.body2">@item.Nombre</MudText></td>
+                        <td>
+                            <span class="planilla-link mud-primary-text"
+                                  style="cursor:pointer;text-decoration:underline dotted"
+                                  @onclick="() => AbrirModal(item)">
+                                @item.CodigoPlanilla
+                            </span>
+                        </td>
+                        <td style="text-align:right"><strong>@item.PuntajeTotal</strong></td>
+                    </tr>
+                }
+
+                @* Si el usuario no está en el top visible, mostrar separador + su fila *@
+                @if (_usuarioFueraDelTop is not null)
+                {
+                    <tr>
+                        <td colspan="4" style="text-align:center;color:var(--mud-palette-text-secondary);font-size:.8rem">
+                            · · ·
+                        </td>
+                    </tr>
+                    var u = _usuarioFueraDelTop;
+                    <tr class="ranking-fila-actual">
+                        <td>@u.Posicion</td>
+                        <td><MudText Typo="Typo.body2">@u.Nombre</MudText></td>
+                        <td>
+                            <span class="planilla-link mud-primary-text"
+                                  style="cursor:pointer;text-decoration:underline dotted"
+                                  @onclick="() => AbrirModal(u)">
+                                @u.CodigoPlanilla
+                            </span>
+                        </td>
+                        <td style="text-align:right"><strong>@u.PuntajeTotal</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+
+        <div class="d-flex justify-end mt-3">
+            <MudButton Href="/ranking" Variant="Variant.Text" Color="Color.Primary"
+                       EndIcon="@Icons.Material.Filled.ArrowForward">
+                Ver ranking completo
+            </MudButton>
+        </div>
+    }
+</MudPaper>
+
+<style>
+    .ranking-fila-actual td {
+        background-color: var(--mud-palette-primary-lighten) !important;
+        font-weight: 600;
+    }
+</style>

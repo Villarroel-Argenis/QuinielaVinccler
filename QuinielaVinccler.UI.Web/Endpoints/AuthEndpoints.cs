@@ -1,7 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Mvc;
-
-namespace QuinielaVinccler.UI.Web.Endpoints;
+﻿namespace QuinielaVinccler.UI.Web.Endpoints;
 
 public static class AuthEndpoints
 {

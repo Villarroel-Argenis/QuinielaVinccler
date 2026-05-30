@@ -25,6 +25,11 @@
                         Icon="@Icons.Material.Filled.GridOn">
                 Mis Planillas
             </MudNavLink>
+            <MudNavLink Href="/ranking"
+                        Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Star">
+                Ranking
+            </MudNavLink>
 
             <AuthorizeView Roles="Admin" Context="adminCtx">
                 <Authorized>

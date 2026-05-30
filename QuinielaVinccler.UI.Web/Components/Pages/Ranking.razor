@@ -1,0 +1,143 @@
+@* Components/Pages/Ranking.razor *@
+@page "/ranking"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "Registrado")]
+@using QuinielaVinccler.UI.Web.Services
+
+<PageTitle>Ranking — Quiniela Vinccler 2026</PageTitle>
+
+<style>
+    .ranking-fila-actual td {
+        font-weight: 600;
+    }
+
+    .ranking-podio-1 {
+        color: #FFD700;
+    }
+
+    .ranking-podio-2 {
+        color: #C0C0C0;
+    }
+
+    .ranking-podio-3 {
+        color: #CD7F32;
+    }
+
+    .premios-card {
+        border-left: 4px solid var(--mud-palette-primary);
+    }
+
+    .planilla-link {
+        cursor: pointer;
+        text-decoration: underline dotted;
+    }
+</style>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+
+    @* ── ENCABEZADO ── *@
+    <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-2">
+        <MudText Typo="Typo.h4">🏆 Ranking</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            @_total participantes
+        </MudText>
+    </div>
+
+    @* ── PREMIOS ── *@
+    <MudCard Class="mb-5" Elevation="1">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="ranking-podio-1">🥇 1er Premio</MudText>
+                    <MudText Typo="Typo.body1">$2,000 + 50% de lo recaudado</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="ranking-podio-2">🥈 2do Premio</MudText>
+                    <MudText Typo="Typo.body1">$1,000 + 30% de lo recaudado</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3 premios-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6" Class="ranking-podio-3">🥉 3er Premio</MudText>
+                    <MudText Typo="Typo.body1">$500 + 20% de lo recaudado</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-3" Style="border-left: 4px solid var(--mud-palette-error);" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h6">🤡 Menor puntaje</MudText>
+                    <MudText Typo="Typo.body1">$2,000</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+            * En caso de empate, el premio se reparte proporcionalmente entre los empatados.
+        </MudText>
+    </MudCard>
+
+    @* ── TABLA ── *@
+    @if (_cargando)
+    {
+        <div class="d-flex justify-center pa-12">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else if (_ranking.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Aún no hay planillas participando.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_ranking" Hover="true" Dense="true" Elevation="2"
+                  RowClassFunc="FilaClass" T="RankingItemDto">
+            <HeaderContent>
+                <MudTh Style="width:60px">#</MudTh>
+                <MudTh>Participante</MudTh>
+                <MudTh>Planilla</MudTh>
+                <MudTh Style="text-align:right">Puntaje</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    @switch (context.Posicion)
+                    {
+                        case 1:
+                            <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>
+                            ; break;
+                        case 2:
+
+                            <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>
+                            ; break;
+                        case 3:
+
+                            <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>
+                            ; break;
+                        default:
+                            @if (context.Posicion == _ultimaPosicion)
+                            {
+                                <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
+                            }
+                            else
+                            {
+                                @context.Posicion
+                            }
+                            break;
+                    }
+                </MudTd>
+                <MudTd>
+                    <MudText Typo="Typo.body2">@context.Nombre</MudText>
+                </MudTd>
+                <MudTd>
+                    <span class="planilla-link mud-primary-text"
+                          @onclick="() => AbrirModal(context)">
+                        @context.CodigoPlanilla
+                    </span>
+                </MudTd>
+                <MudTd Style="text-align:right">
+                    <MudText Typo="Typo.body2"><strong>@context.PuntajeTotal</strong> pts</MudText>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+
+</MudContainer>

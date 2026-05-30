@@ -213,6 +213,7 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
     /// </summary>
     public async Task ResetearTodosPuntosAsync()
     {
+        // ── Puntos ────────────────────────────────────────────────────────────
         await db.PrediccionesGrupo
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.PuntosObtenidos, (int?)null));
 
@@ -229,6 +230,32 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
         await db.Planillas
             .Where(p => p.UserId != null)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.PuntajeTotal, 0));
+
+        // ── Resultados de partidos ─────────────────────────────────────────────
+        await db.Partidos
+            .Where(p => p.Fase == Fase.Grupos)
+            .ExecuteUpdateAsync(p => p
+                .SetProperty(x => x.ResultadoGrupo, (ResultadoPartido?)null));
+
+        await db.Partidos
+            .Where(p => p.Fase != Fase.Grupos)
+            .ExecuteUpdateAsync(p => p
+                .SetProperty(x => x.EquipoLocalId, (int?)null)
+                .SetProperty(x => x.EquipoVisitanteId, (int?)null)
+                .SetProperty(x => x.EquipoGanadorId, (int?)null)
+                .SetProperty(x => x.GolesLocal, (int?)null)
+                .SetProperty(x => x.GolesVisitante, (int?)null));
+
+        // ── ResultadoFinal singleton ───────────────────────────────────────────
+        await db.ResultadoFinal
+            .ExecuteUpdateAsync(p => p
+                .SetProperty(x => x.CampeonEquipoId, (int?)null)
+                .SetProperty(x => x.SegundoLugarEquipoId, (int?)null)
+                .SetProperty(x => x.TercerLugarEquipoId, (int?)null)
+                .SetProperty(x => x.CuartoLugarEquipoId, (int?)null)
+                .SetProperty(x => x.MasGoleadorEquipoId, (int?)null)
+                .SetProperty(x => x.MasGoleadoEquipoId, (int?)null)
+                .SetProperty(x => x.MenosGoleadoEquipoId, (int?)null));
     }
 
     /// <summary>

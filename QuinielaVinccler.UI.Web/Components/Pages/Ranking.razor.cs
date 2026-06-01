@@ -6,6 +6,9 @@ public partial class Ranking : ComponentBase
     [Inject] private IPlanillaService PlanillaSvc { get; set; } = null!;
     [Inject] private IDialogService DialogSvc { get; set; } = null!;
     [Inject] private AuthenticationStateProvider AuthSp { get; set; } = null!;
+    [Inject] private IConfiguracionService ConfigSvc { get; set; } = null!;
+
+    private bool _quinielaCerrada;
 
     private bool _cargando = true;
     private List<RankingItemDto> _ranking = [];
@@ -29,10 +32,18 @@ public partial class Ranking : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+
         var auth = await AuthSp.GetAuthenticationStateAsync();
         var claim = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         _userId = claim is not null ? int.Parse(claim) : 0;
 
+        _quinielaCerrada = await ConfigSvc.QuinielaCerradaAsync();
+
+        if (!_quinielaCerrada)
+        {
+            _cargando = false;
+            return;
+        }
         _ranking = await PlanillaSvc.GetRankingAsync(_userId);
         _total = _ranking.Count;
         _ultimaPosicion = _ranking.Count > 0 ? _ranking[^1].Posicion : 0;

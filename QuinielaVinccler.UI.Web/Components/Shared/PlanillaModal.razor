@@ -50,7 +50,10 @@
                         <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">✓ Acertaste</MudChip>
                         <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">← Resultado real</MudChip>
                         <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">✗ Tu predicción (falló)</MudChip>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Sin resultado aún</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.HourglassEmpty">
+                            Esperando resultado
+                        </MudChip>
                     </div>
                     @foreach (var grupo in _planilla!.PrediccionesGrupo
                         .GroupBy(p => p.Partido.EquipoLocal!.Grupo)
@@ -121,7 +124,9 @@
                                                          Color="@(pg.ResultadoPredicho == ResultadoPartido.Equis ? Color.Info : Color.Default)">X</MudChip>
                                                 <MudChip T="string" Size="Size.Small"
                                                          Color="@(pg.ResultadoPredicho == ResultadoPartido.Dos ? Color.Info : Color.Default)">2</MudChip>
-                                            }
+                                                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty"
+                                                         Color="Color.Default" Size="Size.Small" />
+                                             }
                                         </div>
                                     }
                                 </div>
@@ -139,6 +144,10 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             Pasa el cursor sobre la ✗ para ver el equipo real
                         </MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.HourglassEmpty">
+                            Esperando resultado
+                        </MudChip>
                     </div>
                     @foreach (var pk in _planilla.PrediccionesKnockout
                         .Where(x => x.Partido.Fase == Fase.RoundOf32)

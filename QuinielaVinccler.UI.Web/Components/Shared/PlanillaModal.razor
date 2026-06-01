@@ -233,6 +233,10 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
                             Pasa el cursor sobre la ✗ para ver el equipo real
                         </MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined"
+                                 Icon="@Icons.Material.Filled.HourglassEmpty">
+                            Esperando resultado
+                        </MudChip>
                     </div>
                     @foreach (var pk in _planilla.PrediccionesKnockout
                         .Where(x => x.Partido.Fase == Fase.RoundOf16)

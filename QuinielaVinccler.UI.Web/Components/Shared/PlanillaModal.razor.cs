@@ -181,15 +181,49 @@ public partial class PlanillaModal : ComponentBase
             $"font-weight:600;color:{(ok == true ? "var(--mud-palette-success)" : ok == false ? "var(--mud-palette-error)" : "inherit")}");
         __builder.AddContent(7, ptsStr);
         __builder.CloseElement();
+
         __builder.OpenElement(8, "td");
-        if (ok.HasValue)
+        if (ok == true)
         {
             __builder.OpenComponent<MudIcon>(9);
-            __builder.AddAttribute(10, "Icon", ok.Value
-                ? Icons.Material.Filled.CheckCircle
-                : Icons.Material.Filled.Cancel);
-            __builder.AddAttribute(11, "Color", ok.Value ? MudBlazor.Color.Success : MudBlazor.Color.Error);
+            __builder.AddAttribute(10, "Icon", Icons.Material.Filled.CheckCircle);
+            __builder.AddAttribute(11, "Color", MudBlazor.Color.Success);
             __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
+            __builder.CloseComponent();
+        }
+        else if (ok == false && realId.HasValue)
+        {
+            string nombreReal = _nombresEquipo.GetValueOrDefault(realId.Value, $"#{realId}");
+            string flagUrl = _planilla!.PrediccionesGrupo
+                .SelectMany(pg => new[] { pg.Partido.EquipoLocal, pg.Partido.EquipoVisitante })
+                .FirstOrDefault(e => e?.Id == realId)?.FlagUrl ?? "";
+
+            __builder.OpenComponent<MudTooltip>(9);
+            __builder.AddAttribute(10, "Placement", Placement.Top);
+            __builder.AddAttribute(11, "TooltipContent", (RenderFragment)(__b2 =>
+            {
+                __b2.OpenElement(0, "div");
+                __b2.AddAttribute(1, "class", "d-flex align-center gap-1");
+                if (!string.IsNullOrEmpty(flagUrl))
+                {
+                    __b2.OpenElement(2, "img");
+                    __b2.AddAttribute(3, "src", flagUrl);
+                    __b2.AddAttribute(4, "style", "height:14px;");
+                    __b2.CloseElement();
+                }
+                __b2.OpenElement(5, "span");
+                __b2.AddContent(6, $" {nombreReal} ");
+                __b2.CloseElement();
+                __b2.CloseElement();
+            }));
+            __builder.AddAttribute(12, "ChildContent", (RenderFragment)(__b2 =>
+            {
+                __b2.OpenComponent<MudIcon>(0);
+                __b2.AddAttribute(1, "Icon", Icons.Material.Filled.Cancel);
+                __b2.AddAttribute(2, "Color", MudBlazor.Color.Error);
+                __b2.AddAttribute(3, "Size", MudBlazor.Size.Small);
+                __b2.CloseComponent();
+            }));
             __builder.CloseComponent();
         }
         __builder.CloseElement();
@@ -202,39 +236,54 @@ public partial class PlanillaModal : ComponentBase
         int? golesLocalPred, int? golesVisitantePred,
         (int? Local, int? Visitante)? real,
         int? ptsObtenidos) => __builder =>
-    {
-        var pred = (golesLocalPred.HasValue && golesVisitantePred.HasValue)
+        {
+            var pred = (golesLocalPred.HasValue && golesVisitantePred.HasValue)
             ? $"{golesLocalPred} - {golesVisitantePred}"
             : "—";
 
-        bool? acierto = null;
-        if (real.HasValue && golesLocalPred.HasValue && golesVisitantePred.HasValue)
-            acierto = golesLocalPred == real.Value.Local && golesVisitantePred == real.Value.Visitante;
+            bool? acierto = null;
+            if (real.HasValue && golesLocalPred.HasValue && golesVisitantePred.HasValue)
+                acierto = golesLocalPred == real.Value.Local && golesVisitantePred == real.Value.Visitante;
 
-        string ptsStr = ptsObtenidos.HasValue ? (ptsObtenidos > 0 ? $"+{ptsObtenidos}" : "0") : "—";
+            string ptsStr = ptsObtenidos.HasValue ? (ptsObtenidos > 0 ? $"+{ptsObtenidos}" : "0") : "—";
 
-        __builder.OpenElement(0, "tr");
-        __builder.OpenElement(1, "td"); __builder.AddContent(2, label); __builder.CloseElement();
-        __builder.OpenElement(3, "td"); __builder.AddContent(4, pred); __builder.CloseElement();
-        __builder.OpenElement(5, "td");
-        __builder.AddAttribute(6, "style",
+            __builder.OpenElement(0, "tr");
+            __builder.OpenElement(1, "td"); __builder.AddContent(2, label); __builder.CloseElement();
+            __builder.OpenElement(3, "td"); __builder.AddContent(4, pred); __builder.CloseElement();
+            __builder.OpenElement(5, "td");
+            __builder.AddAttribute(6, "style",
             $"font-weight:600;color:{(acierto == true ? "var(--mud-palette-success)" : acierto == false ? "var(--mud-palette-error)" : "inherit")}");
-        __builder.AddContent(7, ptsStr);
-        __builder.CloseElement();
-        __builder.OpenElement(8, "td");
-        if (acierto.HasValue)
-        {
-            __builder.OpenComponent<MudIcon>(9);
-            __builder.AddAttribute(10, "Icon", acierto.Value
-                ? Icons.Material.Filled.CheckCircle
-                : Icons.Material.Filled.Cancel);
-            __builder.AddAttribute(11, "Color", acierto.Value ? MudBlazor.Color.Success : MudBlazor.Color.Error);
-            __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
-            __builder.CloseComponent();
-        }
-        __builder.CloseElement();
-        __builder.CloseElement();
-    };
+            __builder.AddContent(7, ptsStr);
+            __builder.CloseElement();
 
+            __builder.OpenElement(8, "td");
+            if (acierto == true)
+            {
+                __builder.OpenComponent<MudIcon>(9);
+                __builder.AddAttribute(10, "Icon", Icons.Material.Filled.CheckCircle);
+                __builder.AddAttribute(11, "Color", MudBlazor.Color.Success);
+                __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
+                __builder.CloseComponent();
+            }
+            else if (acierto == false && real.HasValue)
+            {
+                string marcadorReal = $" {real.Value.Local} - {real.Value.Visitante} ";
+
+                __builder.OpenComponent<MudTooltip>(9);
+                __builder.AddAttribute(10, "Text", marcadorReal);
+                __builder.AddAttribute(11, "Placement", Placement.Top);
+                __builder.AddAttribute(12, "ChildContent", (RenderFragment)(__b2 =>
+                {
+                    __b2.OpenComponent<MudIcon>(0);
+                    __b2.AddAttribute(1, "Icon", Icons.Material.Filled.Cancel);
+                    __b2.AddAttribute(2, "Color", MudBlazor.Color.Error);
+                    __b2.AddAttribute(3, "Size", MudBlazor.Size.Small);
+                    __b2.CloseComponent();
+                }));
+                __builder.CloseComponent();
+            }
+            __builder.CloseElement();
+            __builder.CloseElement();
+        };
     private void Cerrar() => MudDialog.Close();
 }

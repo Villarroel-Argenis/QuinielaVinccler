@@ -11,11 +11,27 @@
         background-color: #77ea7d !important;
         font-weight: 600;
     }
-    .ranking-podio-1 { color: #FFD700; }
-    .ranking-podio-2 { color: #C0C0C0; }
-    .ranking-podio-3 { color: #CD7F32; }
-    .premios-card { border-left: 4px solid var(--mud-palette-primary); }
-    .planilla-link { cursor: pointer; text-decoration: underline dotted; }
+
+    .ranking-podio-1 {
+        color: #FFD700;
+    }
+
+    .ranking-podio-2 {
+        color: #C0C0C0;
+    }
+
+    .ranking-podio-3 {
+        color: #CD7F32;
+    }
+
+    .premios-card {
+        border-left: 4px solid var(--mud-palette-primary);
+    }
+
+    .planilla-link {
+        cursor: pointer;
+        text-decoration: underline dotted;
+    }
 </style>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
@@ -62,99 +78,119 @@
         </MudExpansionPanel>
     </MudExpansionPanels>
 
-    @* ── Filtro + selector de tamaño ── *@
-    <div class="d-flex align-center gap-4 mb-3 flex-wrap">
-        <MudSwitch T="bool" Value="_soloMias" ValueChanged="ToggleSoloMias"
-                   Color="Color.Primary" Label="Ver solo mis planillas" />
-
-        @if (!_soloMias)
-        {
-            <div class="d-flex align-center gap-2">
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Filas por página:</MudText>
-                <MudSelect T="int" Value="_pageSize" ValueChanged="CambiarPageSize"
-                           Dense="true" Margin="Margin.Dense" Style="width:90px">
-                    <MudSelectItem Value="10">10</MudSelectItem>
-                    <MudSelectItem Value="20">20</MudSelectItem>
-                    <MudSelectItem Value="50">50</MudSelectItem>
-                </MudSelect>
-            </div>
-        }
-    </div>
-
-    @if (_cargando)
+    @if (!_quinielaCerrada)
     {
-        <div class="d-flex justify-center pa-12">
-            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
-        </div>
-    }
-    else if (_ranking.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">Aún no hay planillas participando.</MudAlert>
-    }
-    else if (_filtradas.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">No tienes planillas vinculadas.</MudAlert>
+        <MudPaper Elevation="2" Class="pa-8 text-center rounded-lg mt-4">
+            <MudIcon Icon="@Icons.Material.Filled.Lock"
+                     Color="Color.Primary"
+                     Style="font-size:3rem; opacity:.5;"
+                     Class="mb-3" />
+            <MudText Typo="Typo.h6" Class="mb-2">El ranking se mostrará al cerrar la quiniela</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Mientras los participantes pueden seguir editando sus predicciones,
+                las posiciones se mostraran a medida que tengamos los resultados.
+            </MudText>
+        </MudPaper>
     }
     else
     {
-        <MudTable Items="_paginadas" Hover="true" Dense="true" Elevation="2"
-                  RowClassFunc="FilaClass" T="RankingItemDto">
-            <HeaderContent>
-                <MudTh Style="width:60px">#</MudTh>
-                <MudTh>Participante</MudTh>
-                <MudTh>Planilla</MudTh>
-                <MudTh Style="text-align:right">Puntaje</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>
-                    @switch (context.Posicion)
-                    {
-                        case 1:
-                            <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>;
-                            break;
-                        case 2:
-                            <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>;
-                            break;
-                        case 3:
-                            <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>;
-                            break;
-                        default:
-                            @if (context.Posicion == _ultimaPosicion && context.Posicion > 3)
-                            {
-                                <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
-                            }
-                            else
-                            {
-                                @context.Posicion
-                            }
-                            break;
-                    }
-                </MudTd>
-                <MudTd>
-                    <MudText Typo="Typo.body2">@context.Nombre</MudText>
-                </MudTd>
-                <MudTd>
-                    <span class="planilla-link mud-primary-text"
-                          @onclick="() => AbrirModal(context)">
-                        @context.CodigoPlanilla
-                    </span>
-                </MudTd>
-                <MudTd Style="text-align:right">
-                    <MudText Typo="Typo.body2"><strong>@context.PuntajeTotal</strong> pts</MudText>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
 
-        @if (MostrarPaginador)
+        @* ── Filtro + selector de tamaño ── *@
+        <div class="d-flex align-center gap-4 mb-3 flex-wrap">
+            <MudSwitch T="bool" Value="_soloMias" ValueChanged="ToggleSoloMias"
+                       Color="Color.Primary" Label="Ver solo mis planillas" />
+
+            @if (!_soloMias)
+            {
+                <div class="d-flex align-center gap-2">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Filas por página:</MudText>
+                    <MudSelect T="int" Value="_pageSize" ValueChanged="CambiarPageSize"
+                               Dense="true" Margin="Margin.Dense" Style="width:90px">
+                        <MudSelectItem Value="10">10</MudSelectItem>
+                        <MudSelectItem Value="20">20</MudSelectItem>
+                        <MudSelectItem Value="50">50</MudSelectItem>
+                    </MudSelect>
+                </div>
+            }
+        </div>
+
+        @if (_cargando)
         {
-            <div class="d-flex justify-center mt-4">
-                <MudPagination Color="Color.Primary"
-                               Count="@TotalPaginas"
-                               Selected="_paginaActual"
-                               SelectedChanged="CambiarPagina"
-                               ShowFirstButton="true" ShowLastButton="true" />
+            <div class="d-flex justify-center pa-12">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
             </div>
         }
-    }
+        else if (_ranking.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">Aún no hay planillas participando.</MudAlert>
+        }
+        else if (_filtradas.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No tienes planillas vinculadas.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="_paginadas" Hover="true" Dense="true" Elevation="2"
+                      RowClassFunc="FilaClass" T="RankingItemDto">
+                <HeaderContent>
+                    <MudTh Style="width:60px">#</MudTh>
+                    <MudTh>Participante</MudTh>
+                    <MudTh>Planilla</MudTh>
+                    <MudTh Style="text-align:right">Puntaje</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        @switch (context.Posicion)
+                        {
+                            case 1:
+                                <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>
+                                ;
+                                break;
+                            case 2:
+                                <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>
+                                ;
+                                break;
+                            case 3:
+                                <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>
+                                ;
+                                break;
+                            default:
+                                @if (context.Posicion == _ultimaPosicion && context.Posicion > 3)
+                                {
+                                    <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
+                                }
+                                else
+                                {
+                                    @context.Posicion
+                                }
+                                break;
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2">@context.Nombre</MudText>
+                    </MudTd>
+                    <MudTd>
+                        <span class="planilla-link mud-primary-text"
+                              @onclick="() => AbrirModal(context)">
+                            @context.CodigoPlanilla
+                        </span>
+                    </MudTd>
+                    <MudTd Style="text-align:right">
+                        <MudText Typo="Typo.body2"><strong>@context.PuntajeTotal</strong> pts</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
 
+            @if (MostrarPaginador)
+            {
+                <div class="d-flex justify-center mt-4">
+                    <MudPagination Color="Color.Primary"
+                                   Count="@TotalPaginas"
+                                   Selected="_paginaActual"
+                                   SelectedChanged="CambiarPagina"
+                                   ShowFirstButton="true" ShowLastButton="true" />
+                </div>
+            }
+        }
+    }
 </MudContainer>

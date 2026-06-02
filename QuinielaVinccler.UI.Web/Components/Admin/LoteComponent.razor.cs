@@ -10,14 +10,55 @@ public partial class LoteComponent
     private bool _showConfirmDelete = false;
     private string _error = "";
     private bool _quinielaCerrada = false;
+    private FiltroPlanilla _filtro = FiltroPlanilla.Total;
 
     [Inject] private ILoteService LoteService { get; set; } = default!;
     [Inject] private IConfiguracionService ConfigSvc { get; set; } = default!;
+
+    public enum FiltroPlanilla
+    {
+        Total,
+        Asignadas,
+        SinAsignar
+    }
 
     protected override async Task OnInitializedAsync()
     {
         _lotes = await LoteService.GetAsync();
         _quinielaCerrada = await ConfigSvc.QuinielaCerradaAsync();
+    }
+
+    private void AplicarFiltro(FiltroPlanilla filtro)
+    {
+        // Click en el filtro activo lo desactiva (vuelve a Total)
+        if (_filtro == filtro && filtro != FiltroPlanilla.Total)
+        {
+            _filtro = FiltroPlanilla.Total;
+        }
+        else
+        {
+            _filtro = filtro;
+        }
+    }
+
+    private IEnumerable<Lote> LotesFiltrados()
+    {
+        return _filtro switch
+        {
+            FiltroPlanilla.Asignadas  => _lotes.Where(l => l.Planillas.Any(p => p.IsAssigned)),
+            FiltroPlanilla.SinAsignar => _lotes.Where(l => l.Planillas.Any(p => !p.IsAssigned)),
+            _                         => _lotes
+        };
+    }
+
+    private List<Planilla> PlanillasFiltradas(Lote lote)
+    {
+        return _filtro switch
+        {
+            FiltroPlanilla.Asignadas  => lote.Planillas.Where(p => p.IsAssigned).ToList(),
+            FiltroPlanilla.SinAsignar => lote.Planillas.Where(p => !p.IsAssigned).ToList(),
+            _                         => lote.Planillas.ToList()
+        };
     }
 
     private async Task GenerarPlanillas()

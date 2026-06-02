@@ -53,33 +53,66 @@
 
     @if (_lotes.Any())
     {
-        @* ── Header con totales desglosados ── *@
+        @* ── Header con totales clickeables ── *@
         <div class="d-flex align-center justify-space-between mt-6 mb-3 flex-wrap gap-2">
             <MudText Typo="Typo.h6">Lotes generados</MudText>
             <div class="d-flex align-center gap-2 flex-wrap">
-                <MudChip T="string" Color="Color.Primary" Size="Size.Small"
-                         Icon="@Icons.Material.Filled.Inventory2">
+                <MudChip T="string"
+                         Color="Color.Primary"
+                         Size="Size.Small"
+                         Variant="@(_filtro == FiltroPlanilla.Total ? Variant.Filled : Variant.Outlined)"
+                         Icon="@Icons.Material.Filled.Inventory2"
+                         OnClick="() => AplicarFiltro(FiltroPlanilla.Total)"
+                         Style="cursor:pointer;">
                     @_lotes.Sum(l => l.Cantidad) planillas en total
                 </MudChip>
-                <MudChip T="string" Color="Color.Success" Size="Size.Small"
-                         Icon="@Icons.Material.Filled.CheckCircle">
+                <MudChip T="string"
+                         Color="Color.Success"
+                         Size="Size.Small"
+                         Variant="@(_filtro == FiltroPlanilla.Asignadas ? Variant.Filled : Variant.Outlined)"
+                         Icon="@Icons.Material.Filled.CheckCircle"
+                         OnClick="() => AplicarFiltro(FiltroPlanilla.Asignadas)"
+                         Style="cursor:pointer;">
                     @_lotes.Sum(l => l.Planillas.Count(p => p.IsAssigned)) asignadas
                 </MudChip>
-                <MudChip T="string" Color="Color.Warning" Size="Size.Small"
-                         Icon="@Icons.Material.Filled.PendingActions">
+                <MudChip T="string"
+                         Color="Color.Warning"
+                         Size="Size.Small"
+                         Variant="@(_filtro == FiltroPlanilla.SinAsignar ? Variant.Filled : Variant.Outlined)"
+                         Icon="@Icons.Material.Filled.PendingActions"
+                         OnClick="() => AplicarFiltro(FiltroPlanilla.SinAsignar)"
+                         Style="cursor:pointer;">
                     @_lotes.Sum(l => l.Planillas.Count(p => !p.IsAssigned)) sin asignar
                 </MudChip>
             </div>
         </div>
 
-        @foreach (var lote in _lotes)
+        @if (_filtro != FiltroPlanilla.Total)
         {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3"
+                      ShowCloseIcon="true" CloseIconClicked="() => AplicarFiltro(FiltroPlanilla.Total)">
+                Mostrando solo planillas <strong>@(_filtro == FiltroPlanilla.Asignadas ? "asignadas" : "sin asignar")</strong>.
+                Los lotes sin planillas de este tipo no aparecen.
+            </MudAlert>
+        }
+
+        @foreach (var lote in LotesFiltrados())
+        {
+            var planillasVisibles = PlanillasFiltradas(lote);
+
             <MudExpansionPanel Class="mb-2">
                 <TitleContent>
-                    <div class="d-flex align-center gap-4">
+                    <div class="d-flex align-center gap-4 flex-wrap">
                         <MudText Typo="Typo.subtitle1"><strong>@lote.Codigo</strong></MudText>
                         <MudChip T="string" Size="Size.Small" Color="Color.Primary">
-                            @lote.Cantidad planillas
+                            @if (_filtro == FiltroPlanilla.Total)
+                            {
+                                <span>@lote.Cantidad planillas</span>
+                            }
+                            else
+                            {
+                                <span>@planillasVisibles.Count de @lote.Cantidad</span>
+                            }
                         </MudChip>
                         <MudText Typo="Typo.body2" Class="mud-text-secondary">
                             @lote.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
@@ -106,7 +139,7 @@
                     </div>
                 </TitleContent>
                 <ChildContent>
-                    <MudTable Items="lote.Planillas" Hover="true" Striped="true" Dense="true">
+                    <MudTable Items="planillasVisibles" Hover="true" Striped="true" Dense="true">
                         <HeaderContent>
                             <MudTh>Código</MudTh>
                             <MudTh>Estado</MudTh>

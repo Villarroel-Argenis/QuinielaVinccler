@@ -50,6 +50,8 @@ builder.Services.AddScoped<IPuntuacionService, PuntuacionService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IGanadoresService, GanadoresService>();
+builder.Services.AddScoped<IPartidoAdminService, PartidoAdminService>();
+
 
 builder.Services.AddHostedService<PendingLoginCleanupService>(); // BackgroundService: tarea en segundo plano
 builder.Services.AddSingleton<PendingLoginService>();   // Singleton: puente Blazor ↔ HTTP

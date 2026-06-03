@@ -1,0 +1,283 @@
+@* Components/Admin/PartidosGrupoComponent.razor *@
+@using QuinielaVinccler.UI.Web.Data.Models
+
+<MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="false">
+
+    <MudTabPanel Text="Fase de Grupos">
+        @if (_cargandoGrupo)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4 mt-2">
+                <strong>Swap número:</strong> haz clic en # de un partido, luego en el # destino para intercambiarlos.
+                <strong>Swap equipos:</strong> invierte local↔visitante y actualiza predicciones automáticamente.
+            </MudAlert>
+
+            @foreach (var grupo in _grupos.Keys.OrderBy(k => k))
+            {
+                <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mt-4 mb-2">
+                    Grupo @grupo
+                </MudText>
+                <MudPaper Elevation="1" Class="mb-3">
+                    <MudTable Items="_grupos[grupo]" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh Style="width:90px;"># Partido</MudTh>
+                            <MudTh>Local</MudTh>
+                            <MudTh Style="width:30px;"></MudTh>
+                            <MudTh>Visitante</MudTh>
+                            <MudTh Style="width:120px;">Acciones</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            @{
+                                var esSeleccionado = _swapPartidoAId == context.Id;
+                                var haySeleccion = _swapPartidoAId.HasValue;
+                            }
+                            <MudTd>
+                                <MudText Typo="Typo.body2"
+                                         Style="@(esSeleccionado ? "font-weight:700; color:var(--mud-palette-warning-text);" : "")">
+                                    @context.NumeroPartido
+                                </MudText>
+                            </MudTd>
+                            <MudTd>
+                                <div class="d-flex align-center gap-1">
+                                    <img src="@context.EquipoLocal!.FlagUrl" style="height:14px;" />
+                                    <MudText Typo="Typo.body2">@context.EquipoLocal.Nombre</MudText>
+                                </div>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">vs</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <div class="d-flex align-center gap-1">
+                                    <img src="@context.EquipoVisitante!.FlagUrl" style="height:14px;" />
+                                    <MudText Typo="Typo.body2">@context.EquipoVisitante.Nombre</MudText>
+                                </div>
+                            </MudTd>
+                            <MudTd>
+                                <div class="d-flex align-center gap-1">
+                                    @if (esSeleccionado)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Warning"
+                                                 Style="font-size:10px;">elige destino</MudText>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Size="Size.Small" Color="Color.Default"
+                                                       OnClick="CancelarSwapNumero" />
+                                    }
+                                    else if (haySeleccion)
+                                    {
+                                        <MudTooltip Text="Swapear con este partido">
+                                            <MudIconButton Icon="@Icons.Material.Filled.SwapVert"
+                                                           Size="Size.Small" Color="Color.Success"
+                                                           OnClick="() => SeleccionarSegundoPartido(context)"
+                                                           Disabled="_procesando" />
+                                        </MudTooltip>
+                                    }
+                                    else
+                                    {
+                                        <MudTooltip Text="Swapear número con otro partido">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Tag"
+                                                           Size="Size.Small" Color="Color.Default"
+                                                           OnClick="() => IniciarSwapNumero(context)"
+                                                           Disabled="_procesando" />
+                                        </MudTooltip>
+                                        <MudTooltip Text="Swap local ↔ visitante (actualiza predicciones)">
+                                            <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                                           Size="Size.Small" Color="Color.Warning"
+                                                           OnClick="() => AbrirConfirmSwap(context)"
+                                                           Disabled="_procesando" />
+                                        </MudTooltip>
+                                    }
+                                </div>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            }
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Eliminatorias (Slots)">
+        @if (_cargandoKo)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4 mt-2">
+                Editar slots no afecta predicciones de usuarios — solo cambia qué candidatos
+                se muestran en el bracket.
+            </MudAlert>
+
+            @foreach (var fase in _koPartidos.Keys.OrderBy(f => (int)f))
+            {
+                <MudText Typo="Typo.subtitle1" Style="font-weight:700;" Class="mt-4 mb-2">
+                    @FaseLabel(fase)
+                </MudText>
+                <MudPaper Elevation="1" Class="mb-3">
+                    <MudTable Items="_koPartidos[fase]" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh Style="width:80px;"># Partido</MudTh>
+                            <MudTh>Slot Local</MudTh>
+                            <MudTh Style="width:30px;"></MudTh>
+                            <MudTh>Slot Visitante</MudTh>
+                            <MudTh Style="width:80px;">Acción</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.NumeroPartido</MudText>
+                            </MudTd>
+                            <MudTd>
+                                @if (_editandoSlot == context.Id)
+                                {
+                                    <MudSelect T="string" @bind-Value="_slotLocalEdit"
+                                               Dense="true" Variant="Variant.Outlined"
+                                               Style="min-width:120px;">
+                                        @foreach (var s in GetSlotsParaFase(context.Fase))
+                                        {
+                                            <MudSelectItem Value="@s">@s</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                             Variant="Variant.Outlined">
+                                        @context.SlotLocal
+                                    </MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">vs</MudText>
+                            </MudTd>
+                            <MudTd>
+                                @if (_editandoSlot == context.Id)
+                                {
+                                    <MudSelect T="string" @bind-Value="_slotVisitanteEdit"
+                                               Dense="true" Variant="Variant.Outlined"
+                                               Style="min-width:120px;">
+                                        @foreach (var s in GetSlotsParaFase(context.Fase))
+                                        {
+                                            <MudSelectItem Value="@s">@s</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                             Variant="Variant.Outlined">
+                                        @context.SlotVisitante
+                                    </MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (_editandoSlot == context.Id)
+                                {
+                                    <div class="d-flex gap-1">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                       Color="Color.Success" Size="Size.Small"
+                                                       OnClick="() => ConfirmarSlots(context.Id)"
+                                                       Disabled="_procesando" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Color="Color.Default" Size="Size.Small"
+                                                       OnClick="CancelarSlots"
+                                                       Disabled="_procesando" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                   Size="Size.Small" Color="Color.Default"
+                                                   OnClick="() => IniciarEditarSlots(context)"
+                                                   Disabled="_procesando" />
+                                }
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            }
+        }
+    </MudTabPanel>
+
+</MudTabs>
+
+<MudDialog @bind-Visible="_showConfirmSwap">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" />
+            <MudText Typo="Typo.h6">Confirmar swap de equipos</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        @if (_partidoSwap is not null)
+        {
+            <MudText Class="mb-3">
+                ¿Invertir local y visitante del partido <strong>#@_partidoSwap.NumeroPartido</strong>?
+            </MudText>
+            <div class="d-flex align-center gap-2 mb-3">
+                <div class="d-flex align-center gap-1">
+                    <img src="@_partidoSwap.EquipoLocal!.FlagUrl" style="height:16px;" />
+                    <MudText>@_partidoSwap.EquipoLocal.Nombre</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.SwapHoriz" />
+                <div class="d-flex align-center gap-1">
+                    <img src="@_partidoSwap.EquipoVisitante!.FlagUrl" style="height:16px;" />
+                    <MudText>@_partidoSwap.EquipoVisitante.Nombre</MudText>
+                </div>
+            </div>
+            <MudAlert Severity="Severity.Info" Dense="true">
+                Las predicciones existentes se actualizarán automáticamente (1→2 y 2→1).
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _showConfirmSwap = false" Disabled="_procesando">Cancelar</MudButton>
+        <MudButton Color="Color.Warning" Variant="Variant.Filled"
+                   OnClick="ConfirmarSwap" Disabled="_procesando"
+                   StartIcon="@Icons.Material.Filled.SwapHoriz">
+            @if (_procesando)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Confirmar swap
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showConfirmSwapNumero">
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.SwapVert" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Confirmar intercambio de números</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudText>@_swapDescripcion</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => { _showConfirmSwapNumero = false; CancelarSwapNumero(); }"
+                   Disabled="_procesando">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   OnClick="ConfirmarSwapNumero" Disabled="_procesando"
+                   StartIcon="@Icons.Material.Filled.SwapVert">
+            @if (_procesando)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Confirmar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@if (_mensaje is not null)
+{
+    <MudAlert Severity="@_severidad" Class="mt-4" Dense="true"
+              ShowCloseIcon="true" CloseIconClicked="() => _mensaje = null">
+        @_mensaje
+    </MudAlert>
+}

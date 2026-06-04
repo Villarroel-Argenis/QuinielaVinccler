@@ -109,4 +109,57 @@ public class LoteService(AppDbContext db, IConfiguracionService configuracion) :
 
     private static string GenerarCodigo() =>
         $"P-{Random.Shared.Next(10000000, 99999999)}";
+
+    public async Task<Dictionary<int, int>> GetProgresoPlanillasAsync(List<int> planillaIds)
+    {
+        var grupo = await db.PrediccionesGrupo
+            .Where(pg => planillaIds.Contains(pg.PlanillaId) && pg.ResultadoPredicho != null)
+            .GroupBy(pg => pg.PlanillaId)
+            .Select(g => new { PlanillaId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var koLocal = await db.PrediccionesKnockout
+            .Where(pk => planillaIds.Contains(pk.PlanillaId) && pk.EquipoLocalPredichoId != null)
+            .GroupBy(pk => pk.PlanillaId)
+            .Select(g => new { PlanillaId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var koVisit = await db.PrediccionesKnockout
+            .Where(pk => planillaIds.Contains(pk.PlanillaId) && pk.EquipoVisitantePredichoId != null)
+            .GroupBy(pk => pk.PlanillaId)
+            .Select(g => new { PlanillaId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var final = await db.PrediccionesFinal
+            .Where(pf => planillaIds.Contains(pf.PlanillaId))
+            .Select(pf => new
+            {
+                pf.PlanillaId,
+                Count =
+                    (pf.CampeonEquipoId != null ? 1 : 0) +
+                    (pf.SegundoLugarEquipoId != null ? 1 : 0) +
+                    (pf.TercerLugarEquipoId != null ? 1 : 0) +
+                    (pf.CuartoLugarEquipoId != null ? 1 : 0) +
+                    (pf.MasGoleadorEquipoId != null ? 1 : 0) +
+                    (pf.MasGoleadoEquipoId != null ? 1 : 0) +
+                    (pf.MenosGoleadoEquipoId != null ? 1 : 0) +
+                    (pf.GolesLocalSemi1 != null ? 1 : 0) +
+                    (pf.GolesVisitanteSemi1 != null ? 1 : 0) +
+                    (pf.GolesLocalSemi2 != null ? 1 : 0) +
+                    (pf.GolesVisitanteSemi2 != null ? 1 : 0) +
+                    (pf.GolesLocalGranFinal != null ? 1 : 0) +
+                    (pf.GolesVisitanteGranFinal != null ? 1 : 0)
+            })
+            .ToListAsync();
+
+        // Combinar todo en un dict PlanillaId → total campos
+        var resultado = planillaIds.ToDictionary(id => id, _ => 0);
+
+        foreach (var x in grupo) resultado[x.PlanillaId] += x.Count;
+        foreach (var x in koLocal) resultado[x.PlanillaId] += x.Count;
+        foreach (var x in koVisit) resultado[x.PlanillaId] += x.Count;
+        foreach (var x in final) resultado[x.PlanillaId] += x.Count;
+
+        return resultado;
+    }
 }

@@ -17,6 +17,31 @@ public partial class LoteComponent
 
     [Inject] private IDialogService DialogSvc { get; set; } = default!;
 
+    // Cache: loteId → dict de progreso
+    private Dictionary<int, Dictionary<int, int>> _progresoCache = [];
+
+    private async Task OnLoteExpanded(Lote lote, bool expandido)
+    {
+        if (!expandido || _progresoCache.ContainsKey(lote.Id)) return;
+
+        var idsAsignadas = lote.Planillas
+            .Where(p => p.IsAssigned)
+            .Select(p => p.Id)
+            .ToList();
+
+        if (idsAsignadas.Count == 0) return;
+
+        _progresoCache[lote.Id] = await LoteService.GetProgresoPlanillasAsync(idsAsignadas);
+        StateHasChanged();
+    }
+
+    private int GetProgreso(int loteId, int planillaId)
+    {
+        if (_progresoCache.TryGetValue(loteId, out var dict) &&
+            dict.TryGetValue(planillaId, out var count))
+            return count;
+        return -1; // -1 = todavía cargando
+    }
     private async Task AbrirModal(Planilla planilla)
     {
         var nombre = planilla.User?.FullName ?? "";

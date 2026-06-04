@@ -173,4 +173,15 @@ public partial class LoteComponent
             _error = $"Error al eliminar: {ex.Message}";
         }
     }
+
+    private string GetReporteUrl()
+    {
+        var filtroParam = _filtro switch
+        {
+            FiltroPlanilla.Asignadas => "?filtro=Asignadas",
+            FiltroPlanilla.SinAsignar => "?filtro=SinAsignar",
+            _ => ""
+        };
+        return $"/api/reporte/planillas{filtroParam}";
+    }
 }

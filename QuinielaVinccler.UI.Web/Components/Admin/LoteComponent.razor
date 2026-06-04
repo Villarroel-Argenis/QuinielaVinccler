@@ -100,7 +100,8 @@
         {
             var planillasVisibles = PlanillasFiltradas(lote);
 
-            <MudExpansionPanel Class="mb-2">
+            <MudExpansionPanel Class="mb-2"
+                               ExpandedChanged="expandido => OnLoteExpanded(lote, expandido)">
                 <TitleContent>
                     <div class="d-flex align-center gap-4 flex-wrap">
                         <MudText Typo="Typo.subtitle1"><strong>@lote.Codigo</strong></MudText>
@@ -143,6 +144,7 @@
                         <HeaderContent>
                             <MudTh>Código</MudTh>
                             <MudTh>Estado</MudTh>
+                            <MudTh Style="width:160px;">Progreso</MudTh>
                             <MudTh></MudTh>
                         </HeaderContent>
                         <RowTemplate>
@@ -160,9 +162,32 @@
                             <MudTd>
                                 @if (context.IsAssigned)
                                 {
+                                    var prog = GetProgreso(lote.Id, context.Id);
+                                    if (prog == -1)
+                                    {
+                                        <MudProgressLinear Indeterminate="true" Color="Color.Primary"
+                                                           Size="Size.Small" Rounded="true" />
+                                    }
+                                    else
+                                    {
+                                        var pct = (int)Math.Round(prog * 100.0 / 149);
+                                        var color = pct == 100 ? Color.Success : pct > 50 ? Color.Info : Color.Warning;
+                                        <div class="d-flex align-center gap-2">
+                                            <MudProgressLinear Value="pct" Max="100" Color="@color"
+                                                               Size="Size.Small" Rounded="true"
+                                                               Style="flex:1;" />
+                                            <MudText Typo="Typo.caption" Style="white-space:nowrap;">
+                                                @prog/149
+                                            </MudText>
+                                        </div>
+                                    }
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (context.IsAssigned)
+                                {
                                     <MudIconButton Icon="@Icons.Material.Filled.Visibility"
-                                                   Size="Size.Small"
-                                                   Color="Color.Primary"
+                                                   Size="Size.Small" Color="Color.Primary"
                                                    OnClick="() => AbrirModal(context)" />
                                 }
                             </MudTd>

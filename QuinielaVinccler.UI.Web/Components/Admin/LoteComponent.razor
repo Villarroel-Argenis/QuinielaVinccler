@@ -53,7 +53,7 @@
 
     @if (_lotes.Any())
     {
-        @* ── Header con totales clickeables ── *@
+        @* ── Header con totales y botón exportar ── *@
         <div class="d-flex align-center justify-space-between mt-6 mb-3 flex-wrap gap-2">
             <MudText Typo="Typo.h6">Lotes generados</MudText>
             <div class="d-flex align-center gap-2 flex-wrap">
@@ -66,6 +66,7 @@
                            Target="_blank">
                     Exportar PDF
                 </MudButton>
+
                 <MudChip T="string"
                          Color="Color.Primary"
                          Size="Size.Small"
@@ -154,8 +155,8 @@
                             <MudTh>Código</MudTh>
                             <MudTh>Usuario</MudTh>
                             <MudTh>Estado</MudTh>
-                            <MudTh Style="width:160px;">Progreso</MudTh>
-                            <MudTh></MudTh>
+                            <MudTh Style="width:180px;">Progreso</MudTh>
+                            <MudTh Style="width:50px;"></MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>@context.Codigo</MudTd>
@@ -170,7 +171,39 @@
                                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">Sin asignar</MudChip>
                                 }
                             </MudTd>
-                            @* resto igual *@
+                            <MudTd>
+                                @if (context.IsAssigned)
+                                {
+                                    var prog = GetProgreso(lote.Id, context.Id);
+                                    if (prog == -1)
+                                    {
+                                        <MudProgressLinear Indeterminate="true" Color="Color.Primary"
+                                                           Size="Size.Small" Rounded="true" />
+                                    }
+                                    else
+                                    {
+                                        var pct = (int)Math.Round(prog * 100.0 / 149);
+                                        var color = pct == 100 ? Color.Success : pct > 50 ? Color.Info : Color.Warning;
+                                        <div class="d-flex align-center gap-2">
+                                            <MudProgressLinear Value="pct" Max="100" Color="@color"
+                                                               Size="Size.Small" Rounded="true"
+                                                               Style="flex:1;" />
+                                            <MudText Typo="Typo.caption" Style="white-space:nowrap;">
+                                                @prog/149
+                                            </MudText>
+                                        </div>
+                                    }
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (context.IsAssigned)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="() => AbrirModal(context)" />
+                                }
+                            </MudTd>
                         </RowTemplate>
                     </MudTable>
                 </ChildContent>

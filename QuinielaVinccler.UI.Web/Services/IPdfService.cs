@@ -3,4 +3,7 @@
 public interface IPdfService
 {
     byte[] GenerarLotePdf(Lote lote);
+    byte[] GenerarReportePlanillasPdf(
+    List<(Planilla Planilla, string NombreUsuario, int CamposCompletos)> datos,
+    string filtroLabel);
 }

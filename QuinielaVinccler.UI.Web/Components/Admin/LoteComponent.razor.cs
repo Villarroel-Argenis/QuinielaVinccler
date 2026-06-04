@@ -15,6 +15,31 @@ public partial class LoteComponent
     [Inject] private ILoteService LoteService { get; set; } = default!;
     [Inject] private IConfiguracionService ConfigSvc { get; set; } = default!;
 
+    [Inject] private IDialogService DialogSvc { get; set; } = default!;
+
+    private async Task AbrirModal(Planilla planilla)
+    {
+        var nombre = planilla.User?.FullName ?? "";
+        
+        var parametros = new DialogParameters<PlanillaModal>
+    {
+        { x => x.PlanillaId, planilla.Id },
+        { x => x.UserId, planilla.UserId ?? 0 },
+        { x => x.CodigoPlanilla, planilla.Codigo },
+        { x => x.NombreUsuario, nombre }
+    };
+
+        var opciones = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Large,
+            FullWidth = true,
+            CloseButton = true,
+            CloseOnEscapeKey = true
+        };
+
+        await DialogSvc.ShowAsync<PlanillaModal>($"Planilla {planilla.Codigo}", parametros, opciones);
+    }
+
     public enum FiltroPlanilla
     {
         Total,

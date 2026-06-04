@@ -49,6 +49,7 @@ public class LoteService(AppDbContext db, IConfiguracionService configuracion) :
     {
         return await db.Lotes
             .Include(l => l.Planillas)
+            .ThenInclude(p => p.User)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
     }

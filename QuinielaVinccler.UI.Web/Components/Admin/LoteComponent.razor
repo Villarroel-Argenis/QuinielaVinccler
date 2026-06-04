@@ -143,6 +143,7 @@
                         <HeaderContent>
                             <MudTh>Código</MudTh>
                             <MudTh>Estado</MudTh>
+                            <MudTh></MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>@context.Codigo</MudTd>
@@ -154,6 +155,15 @@
                                 else
                                 {
                                     <MudChip T="string" Color="Color.Warning" Size="Size.Small">Sin asignar</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                @if (context.IsAssigned)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Size="Size.Small"
+                                                   Color="Color.Primary"
+                                                   OnClick="() => AbrirModal(context)" />
                                 }
                             </MudTd>
                         </RowTemplate>

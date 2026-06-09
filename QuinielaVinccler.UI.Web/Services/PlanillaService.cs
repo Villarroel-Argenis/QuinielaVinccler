@@ -116,32 +116,30 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
 
         var query = db.Planillas
             .Where(p => p.UserId != null)
-            .Join(db.Users,
-                p => p.UserId,
-                u => u.Id,
-                (p, u) => new { Planilla = p, Usuario = u });
+            .Include(p => p.User)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(termino))
         {
-            query = query.Where(x =>
-                x.Planilla.Codigo.Contains(termino) ||
-                x.Usuario.FullName.ToUpper().Contains(termino, StringComparison.InvariantCultureIgnoreCase) ||
-                x.Usuario.Email.ToUpper().Contains(termino, StringComparison.InvariantCultureIgnoreCase) ||
-                x.Usuario.CI.Contains(termino));
+            query = query.Where(p =>
+                p.Codigo.Contains(termino) ||
+                p.User!.FullName.ToUpper().Contains(termino) ||
+                p.User!.Email.ToUpper().Contains(termino) ||
+                p.User!.CI.Contains(termino));
         }
 
         return await query
-            .OrderByDescending(x => x.Planilla.AssignedAt)
-            .Take(50) // límite para no traer toda la tabla
-            .Select(x => new PlanillaAdminDto(
-                x.Planilla.Id,
-                x.Planilla.Codigo,
-                x.Planilla.Estado,
-                x.Planilla.PuntajeTotal,
-                x.Planilla.AssignedAt,
-                x.Usuario.FullName,
-                x.Usuario.Email,
-                x.Usuario.CI))
+            .OrderByDescending(p => p.AssignedAt)
+            .Take(50)
+            .Select(p => new PlanillaAdminDto(
+                p.Id,
+                p.Codigo,
+                p.Estado,
+                p.PuntajeTotal,
+                p.AssignedAt,
+                p.User!.FullName,
+                p.User!.Email,
+                p.User!.CI))
             .ToListAsync();
     }
 

@@ -6,4 +6,5 @@ public interface IPdfService
     byte[] GenerarReportePlanillasPdf(
     List<(Planilla Planilla, string NombreUsuario, int CamposCompletos)> datos,
     string filtroLabel);
+    byte[] GenerarPlanillaPdf(Planilla planilla, Dictionary<int, string> equiposById);
 }

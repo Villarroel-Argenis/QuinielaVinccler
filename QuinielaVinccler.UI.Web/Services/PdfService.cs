@@ -186,4 +186,334 @@ public class PdfService(IWebHostEnvironment env) : IPdfService
             });
         });
     }
+
+    public byte[] GenerarPlanillaPdf(Planilla planilla, Dictionary<int, string> equiposById)
+    {
+        var grupoMap = planilla.PrediccionesGrupo
+            .GroupBy(pg => pg.Partido.EquipoLocal!.Grupo)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.OrderBy(pg => pg.Partido.NumeroPartido).ToList());
+
+        var grupos = grupoMap.Keys.OrderBy(k => k).ToList();
+        var gruposA = grupos.Take(6).ToList();
+        var gruposB = grupos.Skip(6).ToList();
+
+        var r32 = planilla.PrediccionesKnockout.Where(p => p.Partido.Fase == Fase.RoundOf32).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        var r16 = planilla.PrediccionesKnockout.Where(p => p.Partido.Fase == Fase.RoundOf16).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        var qf = planilla.PrediccionesKnockout.Where(p => p.Partido.Fase == Fase.Cuartos).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        var sf = planilla.PrediccionesKnockout.Where(p => p.Partido.Fase == Fase.Semis).OrderBy(p => p.Partido.NumeroPartido).ToList();
+        var tp = planilla.PrediccionesKnockout.FirstOrDefault(p => p.Partido.Fase == Fase.TercerPuesto);
+        var final = planilla.PrediccionesKnockout.FirstOrDefault(p => p.Partido.Fase == Fase.Final);
+        var pf = planilla.PrediccionFinal;
+
+        string NombreEquipo(int? id) =>
+            id.HasValue && equiposById.TryGetValue(id.Value, out var n) ? n : "—";
+
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.Legal.Landscape());
+                page.Margin(0.7f, Unit.Centimetre);
+                page.DefaultTextStyle(x => x.FontSize(7f));
+
+                // ── Header ──────────────────────────────────────────────────────
+                page.Header().Column(col =>
+                {
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("QUINIELA FIFA WORLD CUP 2026 — Vinccler C.A.")
+                                .FontSize(10).Bold();
+                            c.Item().Text($"Planilla: {planilla.Codigo}  |  Lote: {planilla.Lote?.Codigo ?? "—"}  |  Titular: {planilla.User?.FullName ?? "—"}")
+                                .FontSize(7.5f).FontColor("#444444");
+                        });
+                        row.ConstantItem(120).AlignRight()
+                            .Text($"Impreso: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                            .FontSize(6.5f).FontColor("#888888");
+                    });
+                    col.Item().PaddingTop(2).LineHorizontal(1).LineColor("#2E7D32");
+                    col.Item().PaddingBottom(2);
+                });
+
+                // ── Contenido en 3 columnas ──────────────────────────────────────
+                page.Content().Row(root =>
+                {
+                    // ── Columna 1: Grupos A-F ────────────────────────────────────
+                    root.RelativeItem(3).Column(col =>
+                    {
+                        col.Item().Text("FASE DE GRUPOS A-F (60 pts/partido)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(2);
+
+                        foreach (var grupo in gruposA)
+                        {
+                            col.Item().Text($"Grupo {grupo}")
+                                .FontSize(7f).Bold().FontColor("#555555");
+
+                            col.Item().Table(t =>
+                            {
+                                t.ColumnsDefinition(c =>
+                                {
+                                    c.RelativeColumn(3);
+                                    c.RelativeColumn(3);
+                                    c.ConstantColumn(13);
+                                    c.ConstantColumn(13);
+                                    c.ConstantColumn(13);
+                                });
+
+                                foreach (var pg in grupoMap[grupo])
+                                {
+                                    var pred = pg.ResultadoPredicho;
+
+                                    t.Cell().PaddingVertical(0.5f).PaddingHorizontal(1)
+                                        .Text(pg.Partido.EquipoLocal?.Nombre ?? "—").FontSize(6.5f);
+                                    t.Cell().PaddingVertical(0.5f).PaddingHorizontal(1)
+                                        .Text(pg.Partido.EquipoVisitante?.Nombre ?? "—").FontSize(6.5f);
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Uno ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("1").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Uno ? "#FFFFFF" : "#333333");
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Equis ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("X").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Equis ? "#FFFFFF" : "#333333");
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Dos ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("2").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Dos ? "#FFFFFF" : "#333333");
+                                }
+                            });
+                            col.Item().PaddingBottom(2);
+                        }
+                    });
+
+                    root.ConstantItem(6);
+
+                    // ── Columna 2: Grupos G-L ────────────────────────────────────
+                    root.RelativeItem(3).Column(col =>
+                    {
+                        col.Item().Text("FASE DE GRUPOS G-L (60 pts/partido)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(2);
+
+                        foreach (var grupo in gruposB)
+                        {
+                            col.Item().Text($"Grupo {grupo}")
+                                .FontSize(7f).Bold().FontColor("#555555");
+
+                            col.Item().Table(t =>
+                            {
+                                t.ColumnsDefinition(c =>
+                                {
+                                    c.RelativeColumn(3);
+                                    c.RelativeColumn(3);
+                                    c.ConstantColumn(13);
+                                    c.ConstantColumn(13);
+                                    c.ConstantColumn(13);
+                                });
+
+                                foreach (var pg in grupoMap[grupo])
+                                {
+                                    var pred = pg.ResultadoPredicho;
+
+                                    t.Cell().PaddingVertical(0.5f).PaddingHorizontal(1)
+                                        .Text(pg.Partido.EquipoLocal?.Nombre ?? "—").FontSize(6.5f);
+                                    t.Cell().PaddingVertical(0.5f).PaddingHorizontal(1)
+                                        .Text(pg.Partido.EquipoVisitante?.Nombre ?? "—").FontSize(6.5f);
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Uno ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("1").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Uno ? "#FFFFFF" : "#333333");
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Equis ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("X").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Equis ? "#FFFFFF" : "#333333");
+
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(pred == ResultadoPartido.Dos ? "#2E7D32" : "#FFFFFF")
+                                        .AlignCenter().PaddingVertical(0.5f)
+                                        .Text("2").FontSize(6.5f)
+                                        .FontColor(pred == ResultadoPartido.Dos ? "#FFFFFF" : "#333333");
+                                }
+                            });
+                            col.Item().PaddingBottom(2);
+                        }
+                    });
+
+                    root.ConstantItem(6);
+
+                    // ── Columna 3: Knockout + Final ──────────────────────────────
+                    root.RelativeItem(2).Column(col =>
+                    {
+                        void FilaKo(ColumnDescriptor c, string label, string? local, string? visitante)
+                        {
+                            c.Item().Table(t =>
+                            {
+                                t.ColumnsDefinition(cd =>
+                                {
+                                    cd.ConstantColumn(38);
+                                    cd.RelativeColumn();
+                                    cd.RelativeColumn();
+                                });
+                                t.Cell().PaddingVertical(0.5f)
+                                    .Text(label).FontSize(6f).FontColor("#888888");
+                                t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                    .Background(local != null ? "#E8F5E9" : "#FFFFFF")
+                                    .Padding(0.5f).Text(local ?? "").FontSize(6f);
+                                t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                    .Background(visitante != null ? "#E8F5E9" : "#FFFFFF")
+                                    .Padding(0.5f).Text(visitante ?? "").FontSize(6f);
+                            });
+                        }
+
+                        // R32
+                        col.Item().Text("DIECISEISAVOS (70 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        foreach (var pk in r32)
+                            FilaKo(col, $"P#{pk.Partido.NumeroPartido}",
+                                pk.EquipoLocalPredichado?.Nombre,
+                                pk.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // R16
+                        col.Item().Text("OCTAVOS (70 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        foreach (var pk in r16)
+                            FilaKo(col, $"P#{pk.Partido.NumeroPartido}",
+                                pk.EquipoLocalPredichado?.Nombre,
+                                pk.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // Cuartos
+                        col.Item().Text("CUARTOS (80 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        foreach (var pk in qf)
+                            FilaKo(col, $"P#{pk.Partido.NumeroPartido}",
+                                pk.EquipoLocalPredichado?.Nombre,
+                                pk.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // Semis
+                        col.Item().Text("SEMIFINALES (100 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        foreach (var pk in sf)
+                            FilaKo(col, $"P#{pk.Partido.NumeroPartido}",
+                                pk.EquipoLocalPredichado?.Nombre,
+                                pk.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // 3°/4°
+                        col.Item().Text("3° Y 4° PUESTO (100 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        if (tp is not null)
+                            FilaKo(col, $"P#{tp.Partido.NumeroPartido}",
+                                tp.EquipoLocalPredichado?.Nombre,
+                                tp.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // Gran Final
+                        col.Item().Text("GRAN FINAL (100 pts/casilla)")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+                        if (final is not null)
+                            FilaKo(col, $"P#{final.Partido.NumeroPartido}",
+                                final.EquipoLocalPredichado?.Nombre,
+                                final.EquipoVisitantePredichado?.Nombre);
+                        col.Item().PaddingBottom(2);
+
+                        // Posiciones Finales
+                        col.Item().Text("POSICIONES FINALES")
+                            .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                        col.Item().PaddingBottom(1);
+
+                        void FilaFinal(ColumnDescriptor c, string label, int? equipoId, int pts)
+                        {
+                            c.Item().Table(t =>
+                            {
+                                t.ColumnsDefinition(cd =>
+                                {
+                                    cd.ConstantColumn(75);
+                                    cd.RelativeColumn();
+                                    cd.ConstantColumn(30);
+                                });
+                                t.Cell().PaddingVertical(0.5f)
+                                    .Text(label).FontSize(6f).FontColor("#555555");
+                                t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                    .Background(equipoId != null ? "#E8F5E9" : "#FFFFFF")
+                                    .Padding(0.5f).Text(NombreEquipo(equipoId)).FontSize(6f);
+                                t.Cell().PaddingVertical(0.5f).AlignRight()
+                                    .Text($"{pts}p").FontSize(5.5f).FontColor("#888888");
+                            });
+                        }
+
+                        if (pf is not null)
+                        {
+                            FilaFinal(col, "Campeon", pf.CampeonEquipoId, 300);
+                            FilaFinal(col, "2do Lugar", pf.SegundoLugarEquipoId, 200);
+                            FilaFinal(col, "3er Lugar", pf.TercerLugarEquipoId, 100);
+                            FilaFinal(col, "4to Lugar", pf.CuartoLugarEquipoId, 50);
+                            FilaFinal(col, "Mas Goleador", pf.MasGoleadorEquipoId, 100);
+                            FilaFinal(col, "Mas Goleado", pf.MasGoleadoEquipoId, 100);
+                            FilaFinal(col, "Menos Goleado", pf.MenosGoleadoEquipoId, 100);
+
+                            col.Item().PaddingBottom(2);
+                            col.Item().Text("MARCADORES EXACTOS (100 pts c/u)")
+                                .FontSize(7.5f).Bold().FontColor("#2E7D32");
+                            col.Item().PaddingBottom(1);
+
+                            void FilaMarcador(ColumnDescriptor c, string label, int? gl, int? gv)
+                            {
+                                var valor = (gl.HasValue && gv.HasValue) ? $"{gl} - {gv}" : "—";
+                                c.Item().Table(t =>
+                                {
+                                    t.ColumnsDefinition(cd =>
+                                    {
+                                        cd.ConstantColumn(75);
+                                        cd.RelativeColumn();
+                                    });
+                                    t.Cell().PaddingVertical(0.5f)
+                                        .Text(label).FontSize(6f).FontColor("#555555");
+                                    t.Cell().Border(0.5f).BorderColor("#CCCCCC")
+                                        .Background(gl.HasValue ? "#E8F5E9" : "#FFFFFF")
+                                        .AlignCenter().Padding(0.5f)
+                                        .Text(valor).FontSize(6f);
+                                });
+                            }
+
+                            FilaMarcador(col, "Semifinal 1 (P#101)", pf.GolesLocalSemi1, pf.GolesVisitanteSemi1);
+                            FilaMarcador(col, "Semifinal 2 (P#102)", pf.GolesLocalSemi2, pf.GolesVisitanteSemi2);
+                            FilaMarcador(col, "Gran Final  (P#104)", pf.GolesLocalGranFinal, pf.GolesVisitanteGranFinal);
+                        }
+                    });
+                });
+
+                // ── Footer ──────────────────────────────────────────────────────
+                page.Footer().Row(row =>
+                {
+                    row.RelativeItem().Text("Vinccler C.A. — Quiniela FIFA 2026")
+                        .FontSize(6.5f).FontColor("#666666");
+                    row.ConstantItem(180).AlignRight()
+                        .Text($"Planilla {planilla.Codigo} — {planilla.User?.FullName ?? ""}")
+                        .FontSize(6.5f).FontColor("#666666");
+                });
+            });
+        }).GeneratePdf();
+    }
 }

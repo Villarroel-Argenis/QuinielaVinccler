@@ -97,6 +97,7 @@ app.UseAntiforgery();
 // ── Endpoints ────────────────────────────────────────────────────────────────
 app.MapAuthEndpoints();
 app.MapLoteEndpoints();
+app.MapPlanillaEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

@@ -125,8 +125,8 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
         {
             query = query.Where(x =>
                 x.Planilla.Codigo.Contains(termino) ||
-                x.Usuario.FullName.ToUpper().Contains(termino) ||
-                x.Usuario.Email.ToUpper().Contains(termino) ||
+                x.Usuario.FullName.ToUpper().Contains(termino, StringComparison.InvariantCultureIgnoreCase) ||
+                x.Usuario.Email.ToUpper().Contains(termino, StringComparison.InvariantCultureIgnoreCase) ||
                 x.Usuario.CI.Contains(termino));
         }
 

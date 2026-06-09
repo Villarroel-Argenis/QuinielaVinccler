@@ -139,6 +139,15 @@
                             </MudChip>
                         }
 
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Print"
+                                   Href="@($"/api/planilla/{planilla.Id}/pdf")"
+                                   Target="_blank">
+                            Imprimir
+                        </MudButton>
+
                         @if (planilla.Estado == EstadoPlanilla.Cerrada || _quinielaCerrada)
                         {
                             <MudButton Variant="Variant.Outlined"

@@ -264,8 +264,23 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
     /// </summary>
     private async Task ActualizarTotalesAsync(IEnumerable<int> planillaIds)
     {
+        var permitirIncompletas = await db.Configuraciones
+            .Where(c => c.Clave == ConfiguracionKeys.PermitirIncompletasEnRanking)
+            .Select(c => c.Valor)
+            .FirstOrDefaultAsync() == "true";
+
         foreach (var planillaId in planillaIds)
         {
+            var planilla = await db.Planillas.FindAsync(planillaId);
+            if (planilla is null) continue;
+
+            // Si no se permiten incompletas y la planilla no está completa → PuntajeTotal = 0
+            if (!permitirIncompletas && planilla.Estado != EstadoPlanilla.Completa)
+            {
+                planilla.PuntajeTotal = 0;
+                continue;
+            }
+
             var ptsGrupo = await db.PrediccionesGrupo
                 .Where(p => p.PlanillaId == planillaId)
                 .SumAsync(p => p.PuntosObtenidos ?? 0);
@@ -283,9 +298,7 @@ public class PuntuacionService(AppDbContext db) : IPuntuacionService
                 (pFinal.PuntosMarcadorSemi2 ?? 0) +
                 (pFinal.PuntosMarcadorGranFinal ?? 0);
 
-            var planilla = await db.Planillas.FindAsync(planillaId);
-            if (planilla is not null)
-                planilla.PuntajeTotal = ptsGrupo + ptsKo + ptsFinal;
+            planilla.PuntajeTotal = ptsGrupo + ptsKo + ptsFinal;
         }
 
         await db.SaveChangesAsync();

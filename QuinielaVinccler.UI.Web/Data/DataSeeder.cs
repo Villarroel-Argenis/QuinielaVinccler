@@ -41,6 +41,7 @@ public static class DataSeeder
         {
             (ConfiguracionKeys.QuinielaCerrada, "false"),
             (ConfiguracionKeys.FechaCierreUtc,  fechaCierre),
+            (ConfiguracionKeys.PermitirIncompletasEnRanking, "false")
         };
 
         foreach (var (clave, valorDefault) in claves)

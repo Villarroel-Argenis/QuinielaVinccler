@@ -37,6 +37,29 @@
             </div>
         </MudPaper>
 
+        <MudPaper Elevation="1" Class="pa-4 mb-4 rounded">
+            <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:600;">
+                        Planillas incompletas en el ranking
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Por defecto solo participan planillas con las 149 predicciones completas.
+                        Activa esto para incluir también las planillas incompletas.
+                        No se puede cambiar con la quiniela cerrada.
+                    </MudText>
+                </div>
+                <MudTooltip Text="@(_quinielaCerrada ? "No se puede modificar con la quiniela cerrada." : "")"
+                            Disabled="@(!_quinielaCerrada)">
+                    <MudSwitch T="bool"
+                               Value="_permitirIncompletas"
+                               ValueChanged="TogglePermitirIncompletas"
+                               Color="Color.Warning"
+                               Disabled="_guardando || _quinielaCerrada"
+                               Label="@(_permitirIncompletas ? "Todas las asignadas" : "Solo completas")" />
+                </MudTooltip>
+            </div>
+        </MudPaper>
         @* ── Fecha de cierre programado ── *@
         <MudPaper Elevation="1" Class="pa-4 mb-4 rounded">
             <MudText Typo="Typo.subtitle1" Style="font-weight:600;" Class="mb-2">

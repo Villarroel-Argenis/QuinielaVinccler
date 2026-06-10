@@ -124,12 +124,17 @@ public partial class PlanillaDetalle : ComponentBase
 
         if (_planilla is null || _planilla.Estado == EstadoPlanilla.Cerrada) return;
 
+        _camposCompletos = CalcularProgreso();
+
         var nuevoEstado = _camposCompletos >= TotalCampos
             ? EstadoPlanilla.Completa
             : EstadoPlanilla.EnProgreso;
 
         if (_planilla.Estado != nuevoEstado)
+        {
+            _planilla.Estado = nuevoEstado;
             await PredSvc.ActualizarEstadoAsync(_planilla.Id, nuevoEstado);
+        }
     }
 
     // ── Guardar grupos ────────────────────────────────────────────────────────

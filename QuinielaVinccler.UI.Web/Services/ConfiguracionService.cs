@@ -52,4 +52,9 @@ public class ConfiguracionService(AppDbContext db) : IConfiguracionService
 
         return estado is not EstadoPlanilla.Cerrada and not EstadoPlanilla.SinAsignar;
     }
+    public async Task<bool> PermitirIncompletasEnRankingAsync()
+    {
+        var val = await GetAsync(ConfiguracionKeys.PermitirIncompletasEnRanking);
+        return val == "true";
+    }
 }

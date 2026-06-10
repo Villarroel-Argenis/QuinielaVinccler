@@ -131,7 +131,26 @@
                             @GetLabelEstado(planilla.Estado)
                         </MudChip>
 
-                        @if (planilla.PuntajeTotal > 0)
+                        @if (_quinielaCerrada && planilla.IsAssigned)
+                        {
+                            if (planilla.Estado == EstadoPlanilla.Completa || _permitirIncompletas)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Size="Size.Small"
+                                         Icon="@Icons.Material.Filled.Star">
+                                    @planilla.PuntajeTotal pts
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudTooltip Text="Esta planilla no participará en el ranking porque no tiene las 149 predicciones completas."
+                                            Placement="Placement.Top">
+                                    <MudIcon Icon="@Icons.Material.Filled.Warning"
+                                             Color="Color.Warning"
+                                             Size="Size.Medium" />
+                                </MudTooltip>
+                            }
+                        }
+                        else if (planilla.PuntajeTotal > 0)
                         {
                             <MudChip T="string" Color="Color.Warning" Size="Size.Small"
                                      Icon="@Icons.Material.Filled.Star">

@@ -17,11 +17,14 @@ public partial class MisPlanillas : ComponentBase
     private bool _cargando = true;
     private bool _quinielaCerrada;
     private int _userId;
+    private bool _permitirIncompletas;
 
     protected override async Task OnInitializedAsync()
     {
+
         var state = await AuthState;
         var userIdStr = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _permitirIncompletas = await ConfigSvc.PermitirIncompletasEnRankingAsync();
 
         if (int.TryParse(userIdStr, out var id))
             _userId = id;

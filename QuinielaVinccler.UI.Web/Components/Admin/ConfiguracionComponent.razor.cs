@@ -13,6 +13,9 @@ public partial class ConfiguracionComponent : ComponentBase
     private string _mensaje = "";
     private Severity _mensajeSeveridad = Severity.Info;
 
+    private bool _permitirIncompletas;
+    private bool _quinielaCerrada;
+
     protected override async Task OnInitializedAsync()
     {
         await CargarConfiguracionAsync();
@@ -21,6 +24,12 @@ public partial class ConfiguracionComponent : ComponentBase
 
     private async Task CargarConfiguracionAsync()
     {
+        var incompletasStr = await ConfigSvc.GetAsync(ConfiguracionKeys.PermitirIncompletasEnRanking);
+        _permitirIncompletas = incompletasStr == "true";
+
+        // Para _quinielaCerrada usa QuinielaCerradaAsync:
+        _quinielaCerrada = await ConfigSvc.QuinielaCerradaAsync();
+
         // Toggle manual
         var manualStr = await ConfigSvc.GetAsync(ConfiguracionKeys.QuinielaCerrada);
         _cierreManual = manualStr == "true";
@@ -37,6 +46,30 @@ public partial class ConfiguracionComponent : ComponentBase
         {
             _fechaCierreLocal = null;
             _horaCierre = new(23, 59, 0);
+        }
+    }
+
+    private async Task TogglePermitirIncompletas(bool valor)
+    {
+        _guardando = true;
+        _mensaje = "";
+        try
+        {
+            _permitirIncompletas = valor;
+            await ConfigSvc.SetAsync(ConfiguracionKeys.PermitirIncompletasEnRanking, valor ? "true" : "false");
+            MostrarMensaje(
+                valor ? "Todas las planillas asignadas participarán en el ranking."
+                      : "Solo planillas con 149 predicciones participarán en el ranking.",
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            _permitirIncompletas = !valor;
+            MostrarMensaje($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _guardando = false;
         }
     }
 

@@ -184,11 +184,41 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
 
     public async Task<List<RankingItemDto>> GetRankingAsync(int userId)
     {
-        // Solo planillas vinculadas (UserId != null)
-        var raw = await db.Planillas
+        var permitirIncompletas = await configuracion.PermitirIncompletasEnRankingAsync();
+
+        var query = db.Planillas
             .AsNoTracking()
             .Where(p => p.UserId != null)
             .Include(p => p.User)
+            .AsQueryable();
+
+        if (!permitirIncompletas)
+        {
+            query = query.Where(p =>
+                db.PrediccionesGrupo.Count(pg =>
+                    pg.PlanillaId == p.Id && pg.ResultadoPredicho != null) == 72 &&
+                db.PrediccionesKnockout.Count(pk =>
+                    pk.PlanillaId == p.Id && pk.EquipoLocalPredichoId != null) == 32 &&
+                db.PrediccionesKnockout.Count(pk =>
+                    pk.PlanillaId == p.Id && pk.EquipoVisitantePredichoId != null) == 32 &&
+                db.PrediccionesFinal.Any(pf =>
+                    pf.PlanillaId == p.Id &&
+                    pf.CampeonEquipoId != null &&
+                    pf.SegundoLugarEquipoId != null &&
+                    pf.TercerLugarEquipoId != null &&
+                    pf.CuartoLugarEquipoId != null &&
+                    pf.MasGoleadorEquipoId != null &&
+                    pf.MasGoleadoEquipoId != null &&
+                    pf.MenosGoleadoEquipoId != null &&
+                    pf.GolesLocalSemi1 != null &&
+                    pf.GolesVisitanteSemi1 != null &&
+                    pf.GolesLocalSemi2 != null &&
+                    pf.GolesVisitanteSemi2 != null &&
+                    pf.GolesLocalGranFinal != null &&
+                    pf.GolesVisitanteGranFinal != null));
+        }
+
+        var raw = await query
             .OrderByDescending(p => p.PuntajeTotal)
             .Select(p => new
             {
@@ -200,7 +230,6 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
             })
             .ToListAsync();
 
-        // Dense ranking en memoria (EF no soporta DENSE_RANK directamente sin raw SQL)
         var resultado = new List<RankingItemDto>(raw.Count);
         int posicion = 1;
         int puntajeAnterior = int.MinValue;
@@ -220,7 +249,6 @@ public class PlanillaService(AppDbContext db, IConfiguracionService configuracio
                 posicionActual = posicion;
                 puntajeAnterior = item.PuntajeTotal;
             }
-            // Si puntaje == anterior, posicionActual se mantiene (dense rank)
 
             resultado.Add(new RankingItemDto(
                 Posicion: posicionActual,

@@ -6,4 +6,5 @@ public interface IConfiguracionService
     Task SetAsync(string clave, string valor);
     Task<bool> PuedeEditarPlanillaAsync(int planillaId);
     Task<bool> QuinielaCerradaAsync();
+    Task<bool> PermitirIncompletasEnRankingAsync();
 }

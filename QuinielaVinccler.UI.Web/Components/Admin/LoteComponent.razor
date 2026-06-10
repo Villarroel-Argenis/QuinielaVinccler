@@ -94,6 +94,15 @@
                          Style="cursor:pointer;">
                     @_lotes.Sum(l => l.Planillas.Count(p => !p.IsAssigned)) sin asignar
                 </MudChip>
+                <MudChip T="string"
+                         Color="Color.Tertiary"
+                         Size="Size.Small"
+                         Variant="@(_filtro == FiltroPlanilla.Completas ? Variant.Filled : Variant.Outlined)"
+                         Icon="@Icons.Material.Filled.EmojiEvents"
+                         OnClick="() => AplicarFiltro(FiltroPlanilla.Completas)"
+                         Style="cursor:pointer;">
+                    @_lotes.Sum(l => l.Planillas.Count(p => p.Estado == EstadoPlanilla.Completa)) completas
+                </MudChip>
             </div>
         </div>
 
@@ -101,7 +110,10 @@
         {
             <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3"
                       ShowCloseIcon="true" CloseIconClicked="() => AplicarFiltro(FiltroPlanilla.Total)">
-                Mostrando solo planillas <strong>@(_filtro == FiltroPlanilla.Asignadas ? "asignadas" : "sin asignar")</strong>.
+                Mostrando solo planillas <strong>
+                @(_filtro == FiltroPlanilla.Asignadas ? "asignadas" :
+                  _filtro == FiltroPlanilla.Completas ? "completas" : "sin asignar")
+            </strong>.
                 Los lotes sin planillas de este tipo no aparecen.
             </MudAlert>
         }

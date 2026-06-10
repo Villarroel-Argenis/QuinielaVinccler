@@ -49,6 +49,7 @@ public static class LoteEndpoints
             {
                 "Asignadas" => planillas.Where(p => p.UserId != null).ToList(),
                 "SinAsignar" => planillas.Where(p => p.UserId == null).ToList(),
+                "Completas" => planillas.Where(p => p.Estado == EstadoPlanilla.Completa).ToList(),
                 _ => planillas
             };
 
@@ -56,6 +57,7 @@ public static class LoteEndpoints
             {
                 "Asignadas" => "Solo asignadas",
                 "SinAsignar" => "Solo sin asignar",
+                "Completas" => "Solo completas",
                 _ => "Todas"
             };
 

@@ -69,7 +69,8 @@ public partial class LoteComponent
     {
         Total,
         Asignadas,
-        SinAsignar
+        SinAsignar,
+        Completas
     }
 
     protected override async Task OnInitializedAsync()
@@ -91,25 +92,21 @@ public partial class LoteComponent
         }
     }
 
-    private IEnumerable<Lote> LotesFiltrados()
+    private IEnumerable<Lote> LotesFiltrados() => _filtro switch
     {
-        return _filtro switch
-        {
-            FiltroPlanilla.Asignadas  => _lotes.Where(l => l.Planillas.Any(p => p.IsAssigned)),
-            FiltroPlanilla.SinAsignar => _lotes.Where(l => l.Planillas.Any(p => !p.IsAssigned)),
-            _                         => _lotes
-        };
-    }
+        FiltroPlanilla.Asignadas => _lotes.Where(l => l.Planillas.Any(p => p.IsAssigned)),
+        FiltroPlanilla.SinAsignar => _lotes.Where(l => l.Planillas.Any(p => !p.IsAssigned)),
+        FiltroPlanilla.Completas => _lotes.Where(l => l.Planillas.Any(p => p.Estado == EstadoPlanilla.Completa)),
+        _ => _lotes
+    };
 
-    private List<Planilla> PlanillasFiltradas(Lote lote)
+    private List<Planilla> PlanillasFiltradas(Lote lote) => _filtro switch
     {
-        return _filtro switch
-        {
-            FiltroPlanilla.Asignadas  => lote.Planillas.Where(p => p.IsAssigned).ToList(),
-            FiltroPlanilla.SinAsignar => lote.Planillas.Where(p => !p.IsAssigned).ToList(),
-            _                         => lote.Planillas.ToList()
-        };
-    }
+        FiltroPlanilla.Asignadas => lote.Planillas.Where(p => p.IsAssigned).ToList(),
+        FiltroPlanilla.SinAsignar => lote.Planillas.Where(p => !p.IsAssigned).ToList(),
+        FiltroPlanilla.Completas => lote.Planillas.Where(p => p.Estado == EstadoPlanilla.Completa).ToList(),
+        _ => [.. lote.Planillas]
+    };
 
     private async Task GenerarPlanillas()
     {
@@ -180,6 +177,7 @@ public partial class LoteComponent
         {
             FiltroPlanilla.Asignadas => "?filtro=Asignadas",
             FiltroPlanilla.SinAsignar => "?filtro=SinAsignar",
+            FiltroPlanilla.Completas => "?filtro=Completas",
             _ => ""
         };
         return $"/api/reporte/planillas{filtroParam}";

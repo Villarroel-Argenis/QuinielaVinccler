@@ -138,4 +138,10 @@ public partial class Ranking : ComponentBase
 
         await DialogSvc.ShowAsync<PlanillaModal>($"Planilla {item.CodigoPlanilla}", parametros, opciones);
     }
+
+    // En Ranking.razor.cs
+    private int GetCorrelativo(RankingItemDto item)
+    {
+        return _paginadas.IndexOf(item) + 1 + (_paginaActual - 1) * _pageSize;
+    }
 }

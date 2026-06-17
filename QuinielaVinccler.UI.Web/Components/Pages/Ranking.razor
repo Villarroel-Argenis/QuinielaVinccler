@@ -27,11 +27,6 @@
     .premios-card {
         border-left: 4px solid var(--mud-palette-primary);
     }
-
-    .planilla-link {
-        cursor: pointer;
-        text-decoration: underline dotted;
-    }
 </style>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
@@ -94,8 +89,6 @@
     }
     else
     {
-
-        @* ── Filtro + selector de tamaño ── *@
         <div class="d-flex align-center gap-4 mb-3 flex-wrap">
             <MudSwitch T="bool" Value="_soloMias" ValueChanged="ToggleSoloMias"
                        Color="Color.Primary" Label="Ver solo mis planillas" />
@@ -130,6 +123,8 @@
         }
         else
         {
+            var posicionesDistintas = _ranking.Select(x => x.Posicion).Distinct().OrderBy(x => x).ToList();
+
             <MudTable Items="_paginadas" Hover="true" Dense="true" Elevation="2"
                       RowClassFunc="FilaClass" T="RankingItemDto">
                 <HeaderContent>
@@ -137,46 +132,48 @@
                     <MudTh>Participante</MudTh>
                     <MudTh>Planilla</MudTh>
                     <MudTh Style="text-align:right">Puntaje</MudTh>
+                    <MudTh Style="width:48px"></MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd>
-                        @switch (context.Posicion)
+                        @{
+                            var rango = posicionesDistintas.IndexOf(context.Posicion) + 1;
+                        }
+                        @if (rango == 1)
                         {
-                            case 1:
-                                <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>
-                                ;
-                                break;
-                            case 2:
-                                <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>
-                                ;
-                                break;
-                            case 3:
-                                <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>
-                                ;
-                                break;
-                            default:
-                                @if (context.Posicion == _ultimaPosicion && context.Posicion > 3)
-                                {
-                                    <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
-                                }
-                                else
-                                {
-                                    @context.Posicion
-                                }
-                                break;
+                            <span class="ranking-podio-1" style="font-size:1.3rem">🥇</span>
+                        }
+                        else if (rango == 2)
+                        {
+                            <span class="ranking-podio-2" style="font-size:1.3rem">🥈</span>
+                        }
+                        else if (rango == 3)
+                        {
+                            <span class="ranking-podio-3" style="font-size:1.3rem">🥉</span>
+                        }
+                        else if (context.Posicion == _ultimaPosicion)
+                        {
+                            <span style="font-size:1.1rem" title="Menor puntaje">🙃</span>
+                        }
+                        else
+                        {
+                            @GetCorrelativo(context)
                         }
                     </MudTd>
                     <MudTd>
                         <MudText Typo="Typo.body2">@context.Nombre</MudText>
                     </MudTd>
                     <MudTd>
-                        <span class="planilla-link mud-primary-text"
-                              @onclick="() => AbrirModal(context)">
-                            @context.CodigoPlanilla
-                        </span>
+                        <MudText Typo="Typo.body2">@context.CodigoPlanilla</MudText>
                     </MudTd>
                     <MudTd Style="text-align:right">
                         <MudText Typo="Typo.body2"><strong>@context.PuntajeTotal</strong> pts</MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       OnClick="() => AbrirModal(context)" />
                     </MudTd>
                 </RowTemplate>
             </MudTable>

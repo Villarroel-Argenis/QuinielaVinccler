@@ -1,9 +1,7 @@
-﻿namespace QuinielaVinccler.UI.Web.Data.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
 
-/// <summary>
-/// Tabla singleton — existe una sola fila con los resultados reales del torneo.
-/// El admin la completa progresivamente conforme avanza el torneo.
-/// </summary>
+namespace QuinielaVinccler.UI.Web.Data.Models;
+
 public class ResultadoFinal
 {
     public int Id { get; set; }
@@ -21,13 +19,28 @@ public class ResultadoFinal
     public int? CuartoLugarEquipoId { get; set; }
     public Equipo? CuartoLugar { get; set; }
 
-    // ── Extras fase eliminatoria ──────────────────────────────────────────────
-    public int? MasGoleadorEquipoId { get; set; }
-    public Equipo? MasGoleador { get; set; }
+    // ── Extras fase eliminatoria (múltiples equipos separados por coma) ───────
+    public string? MasGoleadorIds { get; set; }   // ej. "3,17,29"
+    public string? MasGoleadoIds { get; set; }
+    public string? MenosGoleadoIds { get; set; }
 
-    public int? MasGoleadoEquipoId { get; set; }
-    public Equipo? MasGoleado { get; set; }
+    // ── Helpers para parsear los Ids ──────────────────────────────────────────
+    [NotMapped]
+    public List<int> MasGoleadorIdList =>
+        ParseIds(MasGoleadorIds);
 
-    public int? MenosGoleadoEquipoId { get; set; }
-    public Equipo? MenosGoleado { get; set; }
+    [NotMapped]
+    public List<int> MasGoleadoIdList =>
+        ParseIds(MasGoleadoIds);
+
+    [NotMapped]
+    public List<int> MenosGoleadoIdList =>
+        ParseIds(MenosGoleadoIds);
+
+    private static List<int> ParseIds(string? valor) =>
+        string.IsNullOrWhiteSpace(valor)
+            ? []
+            : [.. valor.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                   .Select(s => int.TryParse(s.Trim(), out var id) ? id : 0)
+                   .Where(id => id > 0)];
 }

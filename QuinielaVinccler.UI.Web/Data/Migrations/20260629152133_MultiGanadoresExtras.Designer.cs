@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using QuinielaVinccler.UI.Web.Data;
@@ -11,9 +12,11 @@ using QuinielaVinccler.UI.Web.Data;
 namespace QuinielaVinccler.UI.Web.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260629152133_MultiGanadoresExtras")]
+    partial class MultiGanadoresExtras
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -69,7 +72,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Configuracion", b =>
@@ -93,7 +96,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("Clave")
                         .IsUnique();
 
-                    b.ToTable("Configuraciones", (string)null);
+                    b.ToTable("Configuraciones");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Equipo", b =>
@@ -121,7 +124,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("Nombre")
                         .IsUnique();
 
-                    b.ToTable("Equipos", (string)null);
+                    b.ToTable("Equipos");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Lote", b =>
@@ -146,7 +149,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Lotes", (string)null);
+                    b.ToTable("Lotes");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Partido", b =>
@@ -206,7 +209,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("NumeroPartido")
                         .IsUnique();
 
-                    b.ToTable("Partidos", (string)null);
+                    b.ToTable("Partidos");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Planilla", b =>
@@ -251,7 +254,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Planillas", (string)null);
+                    b.ToTable("Planillas");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.PrediccionFinal", b =>
@@ -335,7 +338,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
 
                     b.HasIndex("TercerLugarEquipoId");
 
-                    b.ToTable("PrediccionesFinal", (string)null);
+                    b.ToTable("PrediccionesFinal");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.PrediccionGrupo", b =>
@@ -365,7 +368,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("PlanillaId", "PartidoId")
                         .IsUnique();
 
-                    b.ToTable("PrediccionesGrupo", (string)null);
+                    b.ToTable("PrediccionesGrupo");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.PrediccionKnockout", b =>
@@ -407,7 +410,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
                     b.HasIndex("PlanillaId", "PartidoId")
                         .IsUnique();
 
-                    b.ToTable("PrediccionesKnockout", (string)null);
+                    b.ToTable("PrediccionesKnockout");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.ResultadoFinal", b =>
@@ -455,7 +458,7 @@ namespace QuinielaVinccler.UI.Web.Data.Migrations
 
                     b.HasIndex("TercerLugarEquipoId");
 
-                    b.ToTable("ResultadoFinal", (string)null);
+                    b.ToTable("ResultadoFinal");
                 });
 
             modelBuilder.Entity("QuinielaVinccler.UI.Web.Data.Models.Partido", b =>

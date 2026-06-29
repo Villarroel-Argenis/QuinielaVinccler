@@ -171,16 +171,6 @@
                         </MudText>
                     </MudItem>
 
-                    @{
-                        var campeonKey  = "r-campeon";
-                        var segundoKey  = "r-segundo";
-                        var terceroKey  = "r-tercero";
-                        var cuartoKey   = "r-cuarto";
-                        var masGolKey   = "r-masGoleador";
-                        var masGoldKey  = "r-masGoleado";
-                        var menosGolKey = "r-menosGoleado";
-                    }
-
                     <FinalEquipoRow Label="Campeón (300 pts)"
                                     ValorActual="_resultadoFinal.CampeonEquipoId"
                                     Equipos="_equipos"
@@ -221,29 +211,50 @@
                         </MudText>
                     </MudItem>
 
-                    <FinalEquipoRow Label="Equipo más goleador (Fase eliminatoria)"
-                                    ValorActual="_resultadoFinal.MasGoleadorEquipoId"
-                                    Equipos="_equipos"
-                                    EquiposById="_equiposById"
-                                    SoloLectura="false"
-                                    MostrarCheckmark="false"
-                                    OnValorChanged="v => _resultadoFinal.MasGoleadorEquipoId = v" />
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Class="mb-2">Equipo(s) más goleador(es)</MudText>
+                        <MudSelect T="int" MultiSelection="true"
+                                   SelectedValues="_masGoleadorIds"
+                                   SelectedValuesChanged="v => _masGoleadorIds = v.ToList()"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ToStringFunc="@(id => _equiposById.TryGetValue(id, out var e) ? e.Nombre : id.ToString())">
+                            @foreach (var e in _equipos.OrderBy(x => x.Nombre))
+                            {
+                                <MudSelectItem T="int" Value="@e.Id">@e.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
 
-                    <FinalEquipoRow Label="Equipo más goleado (Fase eliminatoria)"
-                                    ValorActual="_resultadoFinal.MasGoleadoEquipoId"
-                                    Equipos="_equipos"
-                                    EquiposById="_equiposById"
-                                    SoloLectura="false"
-                                    MostrarCheckmark="false"
-                                    OnValorChanged="v => _resultadoFinal.MasGoleadoEquipoId = v" />
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Class="mb-2">Equipo(s) más goleado(s)</MudText>
+                        <MudSelect T="int" MultiSelection="true"
+                                   SelectedValues="_masGoleadoIds"
+                                   SelectedValuesChanged="v => _masGoleadoIds = v.ToList()"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ToStringFunc="@(id => _equiposById.TryGetValue(id, out var e) ? e.Nombre : id.ToString())">
+                            @foreach (var e in _equipos.OrderBy(x => x.Nombre))
+                            {
+                                <MudSelectItem T="int" Value="@e.Id">@e.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
 
-                    <FinalEquipoRow Label="Equipo menos goleado (Fase eliminatoria)"
-                                    ValorActual="_resultadoFinal.MenosGoleadoEquipoId"
-                                    Equipos="_equipos"
-                                    EquiposById="_equiposById"
-                                    SoloLectura="false"
-                                    MostrarCheckmark="false"
-                                    OnValorChanged="v => _resultadoFinal.MenosGoleadoEquipoId = v" />
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.body2" Class="mb-2">Equipo(s) menos goleado(s)</MudText>
+                        <MudSelect T="int" MultiSelection="true"
+                                   SelectedValues="_menosGoleadoIds"
+                                   SelectedValuesChanged="v => _menosGoleadoIds = v.ToList()"
+                                   Variant="Variant.Outlined"
+                                   Clearable="true"
+                                   ToStringFunc="@(id => _equiposById.TryGetValue(id, out var e) ? e.Nombre : id.ToString())">
+                            @foreach (var e in _equipos.OrderBy(x => x.Nombre))
+                            {
+                                <MudSelectItem T="int" Value="@e.Id">@e.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
 
                     <MudItem xs="12">
                     </MudItem>
@@ -278,7 +289,7 @@
     </DialogActions>
 </MudDialog>
 
-@* ── FAB Guardar — siempre visible sin importar el scroll ───────────────── *@
+@* ── FAB Guardar ─────────────────────────────────────────────────────────── *@
 <div style="position:fixed; bottom:24px; right:24px; z-index:999;">
     <MudFab Color="Color.Primary"
             StartIcon="@Icons.Material.Filled.Save"
@@ -287,7 +298,7 @@
             Disabled="_guardando || _cargando" />
 </div>
 
-@* ── Dialog de confirmación ───────────────────────────────────────────────── *@
+@* ── Dialog de confirmación ──────────────────────────────────────────────── *@
 <MudDialog @bind-Visible="_showConfirm">
     <TitleContent>
         <div class="d-flex align-center gap-2">
@@ -329,7 +340,6 @@
     </DialogActions>
 </MudDialog>
 
-@* ── Snackbar de éxito ────────────────────────────────────────────────────── *@
 @if (_exitoGuardado)
 {
     <MudAlert Severity="Severity.Success" Class="mt-4" Dense="true"

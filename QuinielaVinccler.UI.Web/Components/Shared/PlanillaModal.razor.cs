@@ -286,4 +286,57 @@ public partial class PlanillaModal : ComponentBase
             __builder.CloseElement();
         };
     private void Cerrar() => MudDialog.Close();
+
+    private RenderFragment RenderFilaFinalMulti(string label, int? predichoId, List<int> realIds, int ptsMaximos) => __builder =>
+    {
+        var nombre = predichoId.HasValue
+            ? _nombresEquipo.GetValueOrDefault(predichoId.Value, $"#{predichoId}")
+            : "—";
+
+        bool? ok = (predichoId.HasValue && realIds.Count > 0)
+            ? realIds.Contains(predichoId.Value)
+            : null;
+
+        string ptsStr = ok.HasValue ? (ok.Value ? $"+{ptsMaximos}" : "0") : "—";
+
+        __builder.OpenElement(0, "tr");
+        __builder.OpenElement(1, "td"); __builder.AddContent(2, label); __builder.CloseElement();
+        __builder.OpenElement(3, "td"); __builder.AddContent(4, nombre); __builder.CloseElement();
+        __builder.OpenElement(5, "td");
+        __builder.AddAttribute(6, "style",
+            $"font-weight:600;color:{(ok == true ? "var(--mud-palette-success)" : ok == false ? "var(--mud-palette-error)" : "inherit")}");
+        __builder.AddContent(7, ptsStr);
+        __builder.CloseElement();
+
+        __builder.OpenElement(8, "td");
+        if (ok == true)
+        {
+            __builder.OpenComponent<MudIcon>(9);
+            __builder.AddAttribute(10, "Icon", Icons.Material.Filled.CheckCircle);
+            __builder.AddAttribute(11, "Color", MudBlazor.Color.Success);
+            __builder.AddAttribute(12, "Size", MudBlazor.Size.Small);
+            __builder.CloseComponent();
+        }
+        else if (ok == false && realIds.Count > 0)
+        {
+            // Mostrar los equipos ganadores reales en tooltip
+            var nombresReales = string.Join(", ", realIds
+                .Select(id => _nombresEquipo.GetValueOrDefault(id, $"#{id}")));
+
+            __builder.OpenComponent<MudTooltip>(9);
+            __builder.AddAttribute(10, "Text", nombresReales);
+            __builder.AddAttribute(11, "Placement", Placement.Top);
+            __builder.AddAttribute(12, "ChildContent", (RenderFragment)(__b2 =>
+            {
+                __b2.OpenComponent<MudIcon>(0);
+                __b2.AddAttribute(1, "Icon", Icons.Material.Filled.Cancel);
+                __b2.AddAttribute(2, "Color", MudBlazor.Color.Error);
+                __b2.AddAttribute(3, "Size", MudBlazor.Size.Small);
+                __b2.CloseComponent();
+            }));
+            __builder.CloseComponent();
+        }
+        __builder.CloseElement();
+        __builder.CloseElement();
+    };
 }

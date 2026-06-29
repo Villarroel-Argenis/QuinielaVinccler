@@ -427,9 +427,9 @@
                                 @RenderFilaFinal("🥈 2° Lugar", pf.SegundoLugarEquipoId, rf?.SegundoLugarEquipoId, 200)
                                 @RenderFilaFinal("🥉 3° Lugar", pf.TercerLugarEquipoId, rf?.TercerLugarEquipoId, 100)
                                 @RenderFilaFinal("4° Lugar", pf.CuartoLugarEquipoId, rf?.CuartoLugarEquipoId, 50)
-                                @RenderFilaFinal("⚽ Más Goleador", pf.MasGoleadorEquipoId, rf?.MasGoleadorEquipoId, 100)
-                                @RenderFilaFinal("🔥 Más Goleado", pf.MasGoleadoEquipoId, rf?.MasGoleadoEquipoId, 100)
-                                @RenderFilaFinal("🛡️ Menos Goleado", pf.MenosGoleadoEquipoId, rf?.MenosGoleadoEquipoId, 100)
+                                @RenderFilaFinalMulti("⚽ Más Goleador", pf.MasGoleadorEquipoId, rf?.MasGoleadorIdList ?? [], 100)
+                                @RenderFilaFinalMulti("🔥 Más Goleado", pf.MasGoleadoEquipoId, rf?.MasGoleadoIdList ?? [], 100)
+                                @RenderFilaFinalMulti("🛡️ Menos Goleado", pf.MenosGoleadoEquipoId, rf?.MenosGoleadoIdList ?? [], 100)
                             </tbody>
                         </MudSimpleTable>
 

@@ -10,32 +10,24 @@ public partial class ResultadosComponent : ComponentBase
     private List<Equipo> _equipos = [];
     private Dictionary<int, Equipo> _equiposById = [];
 
-    // Fase de grupos
     private Dictionary<string, List<Partido>> _grupoMap = [];
-
-    // Knockout — trabajamos directamente con Partido
     private List<Partido> _r32 = [], _r16 = [], _cuartos = [], _semis = [];
     private Partido? _tercero, _finalPartido;
-
-    // ResultadoFinal singleton
     private ResultadoFinal? _resultadoFinal;
 
     // ── Estado local de edición ───────────────────────────────────────────────
-
-    // Fase de grupos: partidoId → resultado
     private Dictionary<int, ResultadoPartido?> _resultadosGrupo = [];
-
-    // R32: partidoId → (equipoLocalId, equipoVisitanteId)
     private Dictionary<int, (int? Local, int? Visitante)> _estadoR32 = [];
-
-    // Knockout R16+: partidoId → (equipoLocalId, equipoVisitanteId)
-    // El admin selecciona qué equipo clasificó en cada slot de la llave anterior
     private Dictionary<int, (int? Local, int? Visitante)> _equiposKo = [];
 
-    // Marcadores exactos
     private int? _marcadorSemi1Local, _marcadorSemi1Visitante;
     private int? _marcadorSemi2Local, _marcadorSemi2Visitante;
     private int? _marcadorFinalLocal, _marcadorFinalVisitante;
+
+    // Extras multi-select
+    private List<int> _masGoleadorIds = [];
+    private List<int> _masGoleadoIds = [];
+    private List<int> _menosGoleadoIds = [];
 
     // ── UI ────────────────────────────────────────────────────────────────────
     private bool _showConfirm;
@@ -118,6 +110,11 @@ public partial class ResultadosComponent : ComponentBase
 
         _resultadoFinal = await Db.ResultadoFinal.AsNoTracking().FirstOrDefaultAsync();
 
+        // Cargar listas multi-select
+        _masGoleadorIds = _resultadoFinal?.MasGoleadorIdList ?? [];
+        _masGoleadoIds = _resultadoFinal?.MasGoleadoIdList ?? [];
+        _menosGoleadoIds = _resultadoFinal?.MenosGoleadoIdList ?? [];
+
         _cargando = false;
         StateHasChanged();
     }
@@ -135,12 +132,10 @@ public partial class ResultadosComponent : ComponentBase
     internal int? GetR32Visitante(int partidoId) =>
         _estadoR32.TryGetValue(partidoId, out var e) ? e.Visitante : null;
 
-
     internal void SetR32Local(int partidoId, int? equipoId)
     {
         var cur = _estadoR32.TryGetValue(partidoId, out var e) ? e : (null, null);
         _estadoR32[partidoId] = (equipoId, cur.Visitante);
-        // Actualizar entidad en memoria para que SlotHelper vea el cambio
         var p = _r32.FirstOrDefault(x => x.Id == partidoId);
         if (p is not null) { p.EquipoLocalId = equipoId; p.EquipoLocal = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null; }
     }
@@ -181,7 +176,7 @@ public partial class ResultadosComponent : ComponentBase
         if (p is not null) { p.EquipoVisitanteId = equipoId; p.EquipoVisitante = equipoId.HasValue ? _equiposById.GetValueOrDefault(equipoId.Value) : null; }
     }
 
-    // ── SlotHelper: candidatos para R32 admin ─────────────────────────────────
+    // ── Candidatos R32 ────────────────────────────────────────────────────────
     internal List<Equipo> GetCandidatosR32(string slot, int? excluirId, int? partidoNumero)
     {
         var todosKo = _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
@@ -205,15 +200,7 @@ public partial class ResultadosComponent : ComponentBase
             partidoActualId: partidoNumero);
     }
 
-    // ── Candidatos para Octavos en adelante ──────────────────────────────────
-    /// <summary>
-    /// Resuelve los dos equipos candidatos para un slot G{n} buscando en los
-    /// partidos ya guardados. Funciona para toda la cascada:
-    /// G73 → busca partido #73 en _r32
-    /// G89 → busca partido #89 en _r16
-    /// G97 → busca partido #97 en _cuartos
-    /// etc.
-    /// </summary>
+    // ── Candidatos Knockout ───────────────────────────────────────────────────
     internal List<Equipo> GetCandidatosKo(string slot, int? excluirId = null, int? partidoActualId = null)
     {
         var todosKo = _r32.Concat(_r16).Concat(_cuartos).Concat(_semis)
@@ -223,14 +210,12 @@ public partial class ResultadosComponent : ComponentBase
 
         List<Equipo> candidatos = [];
 
-        // ── GANADOR DE PARTIDO (G73, G89, G101...) ────────────────────────────
         if (slot.StartsWith("G") && int.TryParse(slot[1..], out var matchNum))
         {
             var src = todosKo.FirstOrDefault(p => p.NumeroPartido == matchNum);
             if (src?.EquipoLocal is not null) candidatos.Add(src.EquipoLocal);
             if (src?.EquipoVisitante is not null) candidatos.Add(src.EquipoVisitante);
 
-            // Excluir el perdedor ya seleccionado en 3°/4° puesto
             if (_tercero is not null)
             {
                 var estadoTercero = _equiposKo.TryGetValue(_tercero.Id, out var et) ? et : (null, null);
@@ -241,21 +226,16 @@ public partial class ResultadosComponent : ComponentBase
                     candidatos = [.. candidatos.Where(e => e.Id != perdedorId.Value)];
             }
         }
-
-        // ── PERDEDOR DE SEMIFINAL (P101, P102) ────────────────────────────────
         else if (slot.StartsWith("P") && int.TryParse(slot[1..], out var semiNum))
         {
             var semi = _semis.FirstOrDefault(p => p.NumeroPartido == semiNum);
             if (semi is not null)
             {
                 var estadoSemi = _equiposKo.TryGetValue(semi.Id, out var es) ? es : (null, null);
-                if (estadoSemi.Local.HasValue && _equiposById.TryGetValue(estadoSemi.Local.Value, out var eqL))
-                    candidatos.Add(eqL);
-                if (estadoSemi.Visitante.HasValue && _equiposById.TryGetValue(estadoSemi.Visitante.Value, out var eqV))
-                    candidatos.Add(eqV);
+                if (estadoSemi.Local.HasValue && _equiposById.TryGetValue(estadoSemi.Local.Value, out var eqL)) candidatos.Add(eqL);
+                if (estadoSemi.Visitante.HasValue && _equiposById.TryGetValue(estadoSemi.Visitante.Value, out var eqV)) candidatos.Add(eqV);
             }
 
-            // Excluir el ganador ya seleccionado en la final
             if (_finalPartido is not null)
             {
                 var estadoFinal = _equiposKo.TryGetValue(_finalPartido.Id, out var ef) ? ef : (null, null);
@@ -273,7 +253,7 @@ public partial class ResultadosComponent : ComponentBase
         return [.. candidatos.DistinctBy(e => e.Id)];
     }
 
-    // ── Confirmación ──────────────────────────────────────────────────────────
+    // ── Reset ─────────────────────────────────────────────────────────────────
     internal void AbrirResetPuntos() => _showResetPuntos = true;
     private bool _showResetPuntos;
 
@@ -299,6 +279,7 @@ public partial class ResultadosComponent : ComponentBase
             StateHasChanged();
         }
     }
+
     internal void AbrirConfirmacion(TabResultado tab)
     {
         _tabActual = tab;
@@ -322,30 +303,14 @@ public partial class ResultadosComponent : ComponentBase
         {
             switch (_tabActual)
             {
-                case TabResultado.Grupos:
-                    await GuardarGruposAsync();
-                    break;
-                case TabResultado.R32:
-                    await GuardarR32Async();
-                    break;
-                case TabResultado.R16:
-                    await GuardarKnockoutAsync(_r16);
-                    break;
-                case TabResultado.Cuartos:
-                    await GuardarKnockoutAsync(_cuartos);
-                    break;
-                case TabResultado.Semis:
-                    await GuardarKnockoutAsync(_semis);
-                    break;
-                case TabResultado.Tercero:
-                    if (_tercero is not null) await GuardarKnockoutAsync([_tercero]);
-                    break;
-                case TabResultado.Final:
-                    await GuardarFinalAsync();
-                    break;
-                case TabResultado.PosicionesFinal:
-                    await GuardarPosicionesFinalesAsync();
-                    break;
+                case TabResultado.Grupos: await GuardarGruposAsync(); break;
+                case TabResultado.R32: await GuardarR32Async(); break;
+                case TabResultado.R16: await GuardarKnockoutAsync(_r16); break;
+                case TabResultado.Cuartos: await GuardarKnockoutAsync(_cuartos); break;
+                case TabResultado.Semis: await GuardarKnockoutAsync(_semis); break;
+                case TabResultado.Tercero: if (_tercero is not null) await GuardarKnockoutAsync([_tercero]); break;
+                case TabResultado.Final: await GuardarFinalAsync(); break;
+                case TabResultado.PosicionesFinal: await GuardarPosicionesFinalesAsync(); break;
             }
 
             _showConfirm = false;
@@ -385,15 +350,10 @@ public partial class ResultadosComponent : ComponentBase
             entity.EquipoLocalId = estado.Local;
             entity.EquipoVisitanteId = estado.Visitante;
             await Db.SaveChangesAsync();
-
-            // Propagar equipos al partido siguiente que tenga G{numero} como slot
             await PropagateSlotAsync(partido.NumeroPartido, estado.Local, estado.Visitante);
-
-            // Recalcular puntos de predicciones
             await PuntuacionSvc.RecalcularKnockoutAsync(partido.Id);
         }
 
-        // Recargar partidos de fases siguientes para reflejar cascada en UI
         var siguientesIds = _r16.Concat(_cuartos).Concat(_semis)
                                .Concat(_tercero is null ? [] : [_tercero])
                                .Concat(_finalPartido is null ? [] : [_finalPartido])
@@ -419,39 +379,9 @@ public partial class ResultadosComponent : ComponentBase
         }
     }
 
-    /// <summary>
-    /// Al guardar el ganador de un partido knockout, propaga ese equipo
-    /// al partido siguiente que tenga SlotLocal o SlotVisitante = "G{numeroPartido}".
-    /// </summary>
     private async Task PropagateSlotAsync(int numeroPartido, int? equipoLocalId, int? equipoVisitanteId)
     {
-        // El partido de Octavos referencia al ganador de este R32 como G{numeroPartido}
-        // Llenamos ese slot con el equipo ganador — pero como aún no hay ganador en R32,
-        // ponemos el equipo local en SlotLocal y visitante en SlotVisitante del partido siguiente
-        // para que el admin pueda seleccionar el ganador en Octavos
-        var slotKey = $"G{numeroPartido}";
-
-        var siguientes = await Db.Partidos
-            .Where(p => p.SlotLocal == slotKey || p.SlotVisitante == slotKey)
-            .ToListAsync();
-
-        foreach (var sig in siguientes)
-        {
-            // El slot G{n} del partido siguiente representará al ganador del partido n
-            // Por ahora ponemos null — el ganador se define cuando el admin seleccione
-            // en Octavos. Lo que SÍ necesitamos es que Partido.EquipoLocal y Visitante
-            // del partido de Octavos tengan los dos equipos del R32 para mostrar opciones.
-            // NOTA: En este modelo, el partido de Octavos tiene DOS slots (SlotLocal y SlotVisitante)
-            // cada uno apuntando a un partido de R32 distinto.
-            // slot G73 en Octavos → equipo que GANE el partido #73 (local o visitante del #73)
-            // No podemos poner ambos en EquipoLocalId — solo uno cabe.
-            // La solución: dejamos null hasta que el admin seleccione el ganador en Octavos,
-            // pero el botón de Octavos debe resolver sus candidatos desde los partidos de R32.
-            // Por eso no tocamos nada aquí — la propagación real ocurre en PropagateGanadorAsync
-            // cuando el admin selecciona el ganador de R32 en futuros cambios de diseño.
-        }
-
-        await Db.SaveChangesAsync();
+        await Task.CompletedTask;
     }
 
     private async Task GuardarKnockoutAsync(List<Partido> partidos)
@@ -467,35 +397,22 @@ public partial class ResultadosComponent : ComponentBase
             await Db.SaveChangesAsync();
             await Db.Entry(entity).ReloadAsync();
 
-            // Propagar ambos equipos al partido siguiente
             if (estado.Local.HasValue)
                 await PropagateGanadorAsync(partido.NumeroPartido, estado.Local.Value, isLocal: true);
             if (estado.Visitante.HasValue)
                 await PropagateGanadorAsync(partido.NumeroPartido, estado.Visitante.Value, isLocal: false);
 
-            // Recalcular siempre — incluso al borrar para resetear puntos a 0
             await PuntuacionSvc.RecalcularKnockoutAsync(partido.Id);
         }
 
         await RecargarPartidosAsync();
     }
 
-    /// <summary>
-    /// Propaga el ganador de un partido al slot del partido siguiente.
-    /// El partido siguiente referencia al ganador como G{numeroPartido}.
-    /// </summary>
     private async Task PropagateGanadorAsync(int numeroPartido, int equipoId, bool isLocal)
     {
-        // No propagamos a la siguiente fase — el admin selecciona directamente
-        // los equipos de cada partido en cada tab.
-        // Esta función queda reservada para futuras implementaciones.
         await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Recarga todos los partidos de fases siguientes desde DB para reflejar
-    /// la cascada en la UI después de guardar.
-    /// </summary>
     private async Task RecargarPartidosAsync()
     {
         var ids = _r16.Concat(_cuartos).Concat(_semis)
@@ -552,9 +469,10 @@ public partial class ResultadosComponent : ComponentBase
         entity.SegundoLugarEquipoId = _resultadoFinal.SegundoLugarEquipoId;
         entity.TercerLugarEquipoId = _resultadoFinal.TercerLugarEquipoId;
         entity.CuartoLugarEquipoId = _resultadoFinal.CuartoLugarEquipoId;
-        entity.MasGoleadorEquipoId = _resultadoFinal.MasGoleadorEquipoId;
-        entity.MasGoleadoEquipoId = _resultadoFinal.MasGoleadoEquipoId;
-        entity.MenosGoleadoEquipoId = _resultadoFinal.MenosGoleadoEquipoId;
+
+        entity.MasGoleadorIds = _masGoleadorIds.Count > 0 ? string.Join(",", _masGoleadorIds) : null;
+        entity.MasGoleadoIds = _masGoleadoIds.Count > 0 ? string.Join(",", _masGoleadoIds) : null;
+        entity.MenosGoleadoIds = _menosGoleadoIds.Count > 0 ? string.Join(",", _menosGoleadoIds) : null;
 
         await Db.SaveChangesAsync();
         await PuntuacionSvc.RecalcularResultadoFinalAsync();

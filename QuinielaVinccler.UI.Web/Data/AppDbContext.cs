@@ -128,12 +128,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                   .HasForeignKey(r => r.TercerLugarEquipoId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(r => r.CuartoLugar).WithMany()
                   .HasForeignKey(r => r.CuartoLugarEquipoId).OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.MasGoleador).WithMany()
-                  .HasForeignKey(r => r.MasGoleadorEquipoId).OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.MasGoleado).WithMany()
-                  .HasForeignKey(r => r.MasGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
-            entity.HasOne(r => r.MenosGoleado).WithMany()
-                  .HasForeignKey(r => r.MenosGoleadoEquipoId).OnDelete(DeleteBehavior.SetNull);
+            // MasGoleador, MasGoleado, MenosGoleado ahora son strings — sin FK
         });
 
         modelBuilder.Entity<Configuracion>(entity =>
